@@ -95,11 +95,11 @@ export function CalibrationSequence() {
               If you have a <b>"Access is denied" error on Windows,</b> a common
               workaround is to{" "}
               <a
-                href="https://docs.phospho.ai/installation#windows-wsl"
+                href="https://github.com/Disniekie01/phosphobot"
                 target="_blank"
                 className="underline"
               >
-                install phosphobot with WSL (Windows Subsystem for Linux).
+                install IRL Robotics with WSL (Windows Subsystem for Linux).
               </a>
             </li>
           </ul>
@@ -239,13 +239,13 @@ export function CalibrationSequence() {
       <Alert variant={"default"} className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>
-          Calibration is only required if you're not a phospho.ai customer.
+          Calibration is only required if you didn't purchase a pre-calibrated robot.
         </AlertTitle>
         <AlertDescription>
           <p>
             Robots you got from{" "}
-            <a href="https://robots.phospho.ai" className="underline">
-              robots.phospho.ai
+            <a href="https://github.com/Disniekie01/phosphobot" className="underline">
+              IRL Robotics
             </a>{" "}
             are already calibrated.
           </p>

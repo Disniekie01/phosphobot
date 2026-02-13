@@ -182,3 +182,16 @@ node_modules
 .testenv
 bullet3
 .vscode
+
+# Secrets & tokens
+id.token
+*.token
+credentials.json
+
+# Robot recordings (large data)
+recordings/
+
+# ROS2 build artifacts
+so-arm101-ros2-bridge/build/
+so-arm101-ros2-bridge/install/
+so-arm101-ros2-bridge/log/logs.txt

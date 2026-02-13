@@ -516,7 +516,7 @@ export function AITrainingPage() {
                     </a>
                   ) : (
                     <a
-                      href="https://phospho.ai/pro"
+                      href="https://github.com/Disniekie01/phosphobot"
                       target="_blank"
                       rel="noopener noreferrer"
                     >

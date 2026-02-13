@@ -30,6 +30,7 @@ from phosphobot.endpoints import (
     networking_router,
     pages_router,
     recording_router,
+    ros2_router,
     training_router,
     update_router,
 )
@@ -74,7 +75,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         server_ip = get_local_ip()
         logger.success(
-            f"Startup complete. Go to the phosphobot dashboard here: http://{server_ip}:{config.PORT}"
+            f"Startup complete. Go to the IRL Robotics dashboard here: http://{server_ip}:{config.PORT}"
         )
         yield
     finally:
@@ -204,6 +205,7 @@ app.include_router(networking_router)
 app.include_router(update_router)
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(ros2_router)
 
 # TODO : Only allow secured origins
 app.add_middleware(
@@ -236,7 +238,7 @@ def posthog_middleware(request: Request, call_next: Callable) -> JSONResponse:
 
 def version_callback(value: bool) -> None:
     if value:
-        print(f"phosphobot {__version__}")
+        print(f"IRL Robotics {__version__}")
         raise typer.Exit()
 
 
@@ -417,7 +419,7 @@ def start_server(
     if not success:
         logger.warning(
             "All ports failed. Try a custom port with:\n"
-            "phosphobot run --port 8000\n\n"
+            "irlrobotics run --port 8000\n\n"
             "Check used ports with:\n"
             "sudo lsof -i :80 # Replace 80 with your port"
         )

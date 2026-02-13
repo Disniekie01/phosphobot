@@ -176,19 +176,19 @@ export function AdminPage() {
                         <p>
                           If private mode is disabled, datasets are created as
                           public on your Hugging Face account, and trained
-                          models are public under the phospho-app organization.
+                          models are public under your Hugging Face organization.
                         </p>
                         <p>
-                          <b>Requires phospho pro</b> subscription to enable.
+                          <b>Requires IRL Robotics Pro</b> subscription to enable.
                         </p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 {proUser !== true && (
-                  <a href="https://phospho.ai/pro" target="_blank">
+                  <a href="https://github.com/Disniekie01/phosphobot" target="_blank">
                     <Button size="sm" className="text-xs h-8">
-                      Get phospho pro
+                      Get IRL Robotics Pro
                     </Button>
                   </a>
                 )}

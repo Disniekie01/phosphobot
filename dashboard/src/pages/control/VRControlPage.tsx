@@ -1,4 +1,3 @@
-import { PhosphoVRCallout } from "@/components/callout/phospho-vr";
 import {
   Accordion,
   AccordionContent,
@@ -15,7 +14,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth } from "@/context/AuthContext";
 import { useLocalStorageState } from "@/lib/hooks";
 import { fetchWithBaseUrl, fetcher } from "@/lib/utils";
 import { TeleopSettings } from "@/types";
@@ -23,7 +21,7 @@ import { useCallback, useRef } from "react";
 import useSWR from "swr";
 
 export function VRControl() {
-  const { proUser } = useAuth();
+
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [accordionOpen, setAccordionOpen] = useLocalStorageState(
     "vr-how-to-connect-accordion",
@@ -102,8 +100,6 @@ export function VRControl() {
 
   return (
     <div className="space-y-6">
-      {!proUser && <PhosphoVRCallout />}
-
       <Card>
         <CardHeader>
           <CardTitle>VR Control</CardTitle>
@@ -144,7 +140,7 @@ export function VRControl() {
                   <div className="flex flex-wrap gap-3">
                     <Button asChild variant="outline">
                       <a
-                        href="https://docs.phospho.ai/examples/teleop"
+                        href="https://github.com/Disniekie01/phosphobot"
                         target="_blank"
                         rel="noopener noreferrer"
                       >

@@ -1,4 +1,3 @@
-import { PhosphoProCallout } from "@/components/callout/phospho-pro";
 import { AIControlDisclaimer } from "@/components/common/ai-control-disclaimer";
 import { HuggingFaceKeyInput } from "@/components/common/huggingface-key";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,7 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth } from "@/context/AuthContext";
 import { fetcher } from "@/lib/utils";
 import { AdminTokenSettings, ServerStatus } from "@/types";
 import {
@@ -229,7 +227,7 @@ function AIModelsCard() {
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { proUser } = useAuth();
+
   const { data: serverStatus, isLoading } = useSWR<ServerStatus>(
     ["/status"],
     ([url]) => fetcher(url),
@@ -244,8 +242,6 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Phospho Pro Callout */}
-      {!proUser && <PhosphoProCallout />}
       {/* Control */}
       <Card className="flex justify-between md:min-h-[25vh]">
         <CardContent className="w-full flex flex-row gap-4">

@@ -9,15 +9,14 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  BrainCircuit,
   Camera,
   Code,
-  Dumbbell,
   FileCog,
   FolderOpen,
   Home,
   Network,
   Play,
+  Radio,
   Sliders,
 } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
@@ -27,7 +26,7 @@ export function AppSidebar() {
   const currentPath = location.pathname;
 
   return (
-    <Sidebar className="border-r pt-16">
+    <Sidebar className="border-0 pt-16 bg-transparent">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
@@ -87,33 +86,6 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>AI & Training</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={currentPath === "/train"}>
-                  <Link to="/train">
-                    <Dumbbell className="h-5 w-5" />
-                    <span>AI Training</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={currentPath === "/inference"}
-                >
-                  <Link to="/inference">
-                    <BrainCircuit className="h-5 w-5" />
-                    <span>AI Control</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
           <SidebarGroupLabel>Advanced Settings</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -149,6 +121,25 @@ export function AppSidebar() {
                   <Link to="/network">
                     <Network className="h-5 w-5" />
                     <span>Network Management</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>ROS2 & Simulation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={currentPath === "/ros2"}
+                >
+                  <Link to="/ros2">
+                    <Radio className="h-5 w-5 text-orange-500" />
+                    <span>ROS2 Bridge</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

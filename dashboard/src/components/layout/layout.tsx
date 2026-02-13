@@ -7,7 +7,7 @@ import { Outlet } from "react-router-dom";
 
 export function Layout() {
   return (
-    <div className="flex flex-col h-screen bg-muted overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden">
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />

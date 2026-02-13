@@ -396,11 +396,11 @@ export function AIControlPage() {
                       <TooltipContent>
                         <p>
                           <span className="font-semibold">
-                            phosphobot records data in radians.{" "}
+                            IRL Robotics records data in radians.{" "}
                           </span>
                           <span>
                             Use Radians if you recorded your dataset with
-                            phosphobot.
+                            IRL Robotics.
                           </span>
                         </p>
                         <p>

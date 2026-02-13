@@ -78,7 +78,7 @@ export function Footer() {
   }, []);
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t p-4">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 glass bg-card/60 border-0 border-t border-border p-4">
       <div className="flex justify-start items-center gap-x-2">
         <Button
           variant="ghost"
@@ -93,7 +93,7 @@ export function Footer() {
           variant="ghost"
           size="icon"
           onClick={() => {
-            window.open("https://github.com/phospho-app/phosphobot", "_blank");
+            window.open("https://github.com/Disniekie01/phosphobot", "_blank");
           }}
         >
           <GithubIcon className="size-4" />
@@ -152,17 +152,17 @@ export function Footer() {
             <PopoverContent className="min-w-[30rem] p-4 flex flex-col gap-2 text-muted-foreground">
               Run this command in a terminal to update the software:
               <CodeSnippet
-                title="Update phosphobot"
-                code={`brew update && brew upgrade phosphobot
+                title="Update IRL Robotics"
+                code={`brew update && brew upgrade irl-robotics
 # Check version
-phosphobot --version`}
+irlrobotics --version`}
                 language="bash"
                 showLineNumbers={false}
               />
               If updating fails, try to reinstall the software.
               <CodeSnippet
-                title="Reinstall phosphobot"
-                code={`brew uninstall phosphobot && brew install phosphobot`}
+                title="Reinstall IRL Robotics"
+                code={`brew uninstall irl-robotics && brew install irl-robotics`}
                 language="bash"
                 showLineNumbers={false}
               />
@@ -182,23 +182,23 @@ phosphobot --version`}
             </PopoverTrigger>
             <PopoverContent className="min-w-[30rem] p-4 flex flex-col gap-2 text-muted-foreground">
               <p>
-                Use this command in a PowerShell terminal to update phosphobot:
+                Use this command in a PowerShell terminal to update IRL Robotics:
               </p>
               <CodeSnippet
-                title="Update phosphobot"
-                code={`powershell -ExecutionPolicy ByPass -Command "irm https://raw.githubusercontent.com/phospho-app/phosphobot/main/install.ps1 | iex"`}
+                title="Update IRL Robotics"
+                code={`powershell -ExecutionPolicy ByPass -Command "irm https://raw.githubusercontent.com/Disniekie01/phosphobot/main/install.ps1 | iex"`}
                 language="powershell"
                 showLineNumbers={false}
               />
               <p>
-                Alternatively, replace your phosphobot.exe file with the latest
-                one
+                Alternatively, replace your IRL Robotics executable with the
+                latest one
               </p>
               <div className="flex justify-center mt-2">
                 <Button
                   onClick={() =>
                     window.open(
-                      "https://github.com/phospho-app/homebrew-phosphobot/releases/latest",
+                      "https://github.com/Disniekie01/phosphobot/releases/latest",
                       "_blank",
                     )
                   }

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { RectangleGoggles, TestTubeDiagonal } from "lucide-react";
 
-const PHOSPHO_PRO_SUBSCRIBE_URL = "https://phospho.ai/pro";
+const IRL_PRO_URL = "https://github.com/Disniekie01/phosphobot";
 
 export function PhosphoVRCallout({ className }: { className?: string }) {
   return (
@@ -19,8 +19,8 @@ export function PhosphoVRCallout({ className }: { className?: string }) {
                 Pick how to unlock VR control
               </h3>
               <p className="text-muted-foreground">
-                You can unlock VR control in two ways: subscribe to Phospho Pro
-                for full access, or purchase the Meta Store app for basic VR
+                You can unlock VR control in two ways: subscribe to IRL Robotics
+                Pro for full access, or purchase the Meta Store app for basic VR
                 control. Choose the option that suits you best.
               </p>
             </div>
@@ -28,12 +28,11 @@ export function PhosphoVRCallout({ className }: { className?: string }) {
             <div className="grid md:grid-cols-2 gap-4">
               {/* Primary option - Subscription */}
               <div className="relative p-4 border-2 border-green-500 rounded-lg bg-green-50/50 dark:bg-green-950/20">
-                {/* <div className="absolute -top-2 left-3 bg-green-500 text-white px-2 py-0.5 rounded text-xs font-medium">
-                  RECOMMENDED
-                </div> */}
                 <div className="flex items-center gap-2 mb-2">
                   <TestTubeDiagonal className="size-5 text-green-600" />
-                  <span className="font-semibold">Unlock with Phospho Pro</span>
+                  <span className="font-semibold">
+                    Unlock with IRL Robotics Pro
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">
                   Full access to VR control, advanced AI training, and all
@@ -41,7 +40,7 @@ export function PhosphoVRCallout({ className }: { className?: string }) {
                 </p>
                 <Button asChild className="w-full">
                   <a
-                    href={`${PHOSPHO_PRO_SUBSCRIBE_URL}?utm_source=phosphobot_app`}
+                    href={IRL_PRO_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -55,8 +54,7 @@ export function PhosphoVRCallout({ className }: { className?: string }) {
                 <div className="flex items-center gap-2 mb-2">
                   <RectangleGoggles className="size-5 text-muted-foreground" />
                   <span className="font-semibold">
-                    Alternative: Buy the phospho teleoperation app on the Meta
-                    Store
+                    Alternative: Buy the VR teleoperation app on the Meta Store
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">
@@ -80,8 +78,8 @@ export function PhosphoVRCallout({ className }: { className?: string }) {
 
             <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 w-full">
               <p className="text-sm">
-                <strong>Have a phospho starter pack?</strong> Contact us to get
-                access to the VR app.
+                <strong>Have a starter pack?</strong> Contact us to get access to
+                the VR app.
               </p>
             </div>
           </div>

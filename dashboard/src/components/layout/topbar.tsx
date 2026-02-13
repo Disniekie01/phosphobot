@@ -26,7 +26,6 @@ import {
   Mail,
   TestTubeDiagonal,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import useSWR from "swr";
 
 const routeMap = [
@@ -189,7 +188,7 @@ export function AccountTopBar() {
         {!proUser && (
           <DropdownMenuItem asChild>
             <a
-              href="https://phospho.ai/pro?utm_source=phosphobot_app"
+              href="#"
               className="flex items-center"
               target="_blank"
             >
@@ -201,7 +200,7 @@ export function AccountTopBar() {
         {proUser && (
           <DropdownMenuItem asChild>
             <a
-              href="https://billing.phospho.ai/p/login/bIYdRr5xq8BhdagbII"
+              href="#"
               className="flex items-center"
               target="_blank"
             >
@@ -212,7 +211,7 @@ export function AccountTopBar() {
         )}
         <DropdownMenuItem asChild>
           <a
-            href="mailto:contact@phospho.ai"
+            href="mailto:disniekie@irlrobotics.dev"
             className="flex items-center"
             target="_blank"
           >
@@ -233,25 +232,24 @@ export function AccountTopBar() {
 export function TopBar() {
   const currentPath = window.location.pathname;
   const { session } = useAuth();
-  const navigate = useNavigate();
 
   const matchedRoute = routeMap.find(({ path, isPrefix }) =>
     isPrefix ? currentPath.startsWith(path) : currentPath === path,
   );
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex flex-col md:flex-row justify-between items-center gap-4 p-4 bg-background border-b">
+    <div className="fixed top-0 left-0 right-0 z-50 flex flex-col md:flex-row justify-between items-center gap-4 p-4 glass bg-card/70 border-0 border-b border-border">
       {currentPath === "/" && (
         <div className="flex-1">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-green-500">
-            phosphobot
+            IRL Robotics
           </h1>
         </div>
       )}
       {currentPath !== "/" && (
         <div className="flex-1">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-green-500">
-            {matchedRoute?.title ?? "phosphobot"}
+            {matchedRoute?.title ?? "IRL Robotics"}
           </h1>
         </div>
       )}
@@ -260,12 +258,11 @@ export function TopBar() {
         {/* Back button on mobile */}
         <MobileMenu />
         <ServerIP />
-        <AIControlStatus />
         <RecordingStatus />
         <RobotStatusDropdown />
         <Button variant="outline" asChild>
           <a
-            href="https://docs.phospho.ai/welcome"
+            href="https://github.com/Disniekie01/phosphobot"
             className="flex items-center gap-1 text-sm"
             target="_blank"
             rel="noopener noreferrer"
@@ -275,30 +272,9 @@ export function TopBar() {
           </a>
         </Button>
         <ThemeToggle />
-        <div className="flex items-center gap-2">
-          {session ? (
-            <AccountTopBar />
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  navigate("/sign-in");
-                }}
-              >
-                Sign in
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => {
-                  navigate("/sign-up");
-                }}
-              >
-                Sign up
-              </Button>
-            </div>
-          )}
-        </div>
+        {session && (
+          <AccountTopBar />
+        )}
       </div>
     </div>
   );

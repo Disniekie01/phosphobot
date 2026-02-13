@@ -1,6 +1,6 @@
 from loguru import logger
 
-logger.info("Starting phosphobot...")
+logger.info("Starting IRL Robotics...")
 
 import sys
 
@@ -28,23 +28,23 @@ from phosphobot import __version__
 _splash_shown = False
 
 
-def print_phospho_splash() -> None:
+def print_splash() -> None:
     global _splash_shown
     if not _splash_shown:
         print(
             f"""[green]
-    ░█▀█░█░█░█▀█░█▀▀░█▀█░█░█░█▀█░█▀▄░█▀█░▀█▀
-    ░█▀▀░█▀█░█░█░▀▀█░█▀▀░█▀█░█░█░█▀▄░█░█░░█░
-    ░▀░░░▀░▀░▀▀▀░▀▀▀░▀░░░▀░▀░▀▀▀░▀▀░░▀▀▀░░▀░
+    ░▀█▀░█▀▄░█░░░░░█▀▄░█▀█░█▀▄░█▀█░▀█▀░▀█▀░█▀▀░█▀▀
+    ░░█░░█▀▄░█░░░░░█▀▄░█░█░█▀▄░█░█░░█░░░█░░█░░░▀▀█
+    ░▀▀▀░▀░▀░▀▀▀░░░▀░▀░▀▀▀░▀▀░░▀▀▀░░▀░░▀▀▀░▀▀▀░▀▀▀
 
-    phosphobot {__version__}
-    Copyright (c) 2025 phospho https://phospho.ai
+    IRL Robotics {__version__}
+    Copyright (c) 2025 Disniekie / IRL Robotics
             [/green]"""
         )
         _splash_shown = True
 
 
-print_phospho_splash()
+print_splash()
 
 import platform
 import threading
@@ -60,15 +60,15 @@ def fetch_latest_version() -> None:
         if version != "unknown" and (version != "v" + __version__):
             if platform.system() == "Darwin":
                 logger.warning(
-                    f"[update now!] phosphobot v{version} is available. Please update with: \nbrew update && brew upgrade phosphobot"
+                    f"[update now!] IRL Robotics v{version} is available. Please update with: \nbrew update && brew upgrade irl-robotics"
                 )
             elif platform.system() == "Linux":
                 logger.warning(
-                    f"[update now!] phosphobot v{version} is available. Please update with: \nsudo apt update && sudo apt upgrade phosphobot"
+                    f"[update now!] IRL Robotics v{version} is available. Please update with: \nsudo apt update && sudo apt upgrade irl-robotics"
                 )
             else:
                 logger.warning(
-                    f"[update now!] phosphobot v{version} is available. Please update: https://docs.phospho.ai/installation#windows"
+                    f"[update now!] IRL Robotics v{version} is available. Please update from your distribution source."
                 )
     except Exception:
         pass
@@ -103,7 +103,7 @@ cli = typer.Typer(no_args_is_help=True, rich_markup_mode="rich")
 
 def version_callback(value: bool) -> None:
     if value:
-        print(f"phosphobot {__version__}")
+        print(f"IRL Robotics {__version__}")
         raise typer.Exit()
 
 
@@ -120,7 +120,7 @@ def main(
     ] = False,
 ) -> None:
     """
-    phosphobot - A robotics teleoperation server.
+    IRL Robotics - A robotics teleoperation server.
     """
     pass
 
@@ -197,23 +197,23 @@ def update() -> None:
     """
     if platform.system() == "Darwin":
         logger.warning(
-            "To update phosphobot, run the following command:\n"
-            "brew update && brew upgrade phosphobot"
+            "To update IRL Robotics, run the following command:\n"
+            "brew update && brew upgrade irl-robotics"
         )
     elif platform.system() == "Linux":
         logger.warning(
-            "To update phosphobot, run the following command:\n"
-            "sudo apt update && sudo apt upgrade phosphobot"
+            "To update IRL Robotics, run the following command:\n"
+            "sudo apt update && sudo apt upgrade irl-robotics"
         )
     else:
         logger.warning(
-            "To update phosphobot, please refer to the documentation. https://docs.phospho.ai/installation#windows"
+            "To update IRL Robotics, please refer to your distribution source."
         )
 
 
 @cli.command()
 def run(
-    chat: Annotated[bool, typer.Option(help="Run phosphobot in chat mode.")] = False,
+    chat: Annotated[bool, typer.Option(help="Run IRL Robotics in chat mode.")] = False,
     host: Annotated[str, typer.Option(help="Host to bind to.")] = "0.0.0.0",
     port: Annotated[int, typer.Option(help="Port to bind to.")] = 80,
     simulation: Annotated[
@@ -283,7 +283,7 @@ def run(
     ] = True,
 ) -> None:
     """
-    🧪 [green]Run the phosphobot dashboard and API server.[/green] Control your robot and record datasets.
+    🧪 [green]Run the IRL Robotics dashboard and API server.[/green] Control your robot and record datasets.
     """
     from phosphobot.app import start_server
 

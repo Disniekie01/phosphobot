@@ -1,417 +1,153 @@
 #!/bin/bash
+set -e
 
-# phosphobot teleop server installation script
-# --------------------------------------------
-# This script will install and configure phosphobot teleop server on supported platforms.
-# Supported platforms: Raspberry Pi, Linux, macOS
-# Feel free to review the script before running it.
-# Support: contact@phospho.ai
+# IRL Robotics - Installation Script
+# Installs the complete IRL Robotics stack on a fresh Ubuntu machine
+# Usage: curl -sSL https://raw.githubusercontent.com/Disniekie01/phosphobot/main/install.sh | bash
+#   OR: git clone https://github.com/Disniekie01/phosphobot.git && cd phosphobot && bash install.sh
 
-# Run this script on your raspberry pi, linux or macOS device using the following command:
-# curl -fsSL https://raw.githubusercontent.com/phospho-app/phosphobot/main/install.sh | sudo bash
+echo "============================================"
+echo "  IRL Robotics - Installation Script"
+echo "============================================"
+echo ""
 
-# Platform detection
-PLATFORM="unknown"
-OS_TYPE="$(uname)"
-IS_WSL=0
-IS_RPI=0
+# Determine install directory
+INSTALL_DIR="${IRL_INSTALL_DIR:-$HOME/phosphobot}"
 
-# Initialize country variable
-COUNTRY=""
-
-# Parse command-line arguments
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -c|--country)
-            if [[ -n "$2" ]]; then
-                COUNTRY="$2"
-                shift 2
-            else
-                echo "Error: --country requires a country code."
-                exit 1
-            fi
-            ;;
-        *)
-            echo "Error: Unknown option $1"
-            echo "Usage: $0 [--country country_code]"
-            exit 1
-            ;;
-    esac
-done
-
-# Check for root privileges
-check_privileges() {
-    if [[ "$PLATFORM" != "darwin" ]]; then
-        if [[ $EUID -ne 0 ]]; then
-            echo "Error: This script must be run with sudo privileges on Linux-based systems"
-            echo "Please run: sudo $0"
-            exit 1
-        fi
-    else
-        # For macOS, we don't need sudo for brew commands
-        if ! command -v brew &> /dev/null; then
-            echo "Error: Homebrew is not installed. Please install Homebrew first."
-            echo "Visit https://brew.sh for installation instructions."
-            exit 1
-        fi
-    fi
-}
-
-detect_platform() {
-    case "$OS_TYPE" in
-        "Linux")
-            if [ -f /proc/device-tree/model ] && grep -qi "raspberry pi" /proc/device-tree/model; then
-                PLATFORM="rpi"
-                IS_RPI=1
-            elif grep -qi microsoft /proc/version; then
-                PLATFORM="wsl"
-                IS_WSL=1
-            else
-                PLATFORM="linux"
-            fi
-            ;;
-        "Darwin")
-            PLATFORM="darwin"
-            ;;
-        *)
-            echo "Error: Unsupported platform: $OS_TYPE"
-            exit 1
-            ;;
-    esac
-    echo "Detected platform: $PLATFORM"
-}
-
-get_install_dir() {
-    case "$PLATFORM" in
-        "darwin")
-            echo "/Users/$(whoami)/Library/Application Support/phosphobot"
-            ;;
-        *)
-            echo "/home/phosphobot"
-            ;;
-    esac
-}
-
-configure_led_monitoring() {
-    # LED monitor script installation (existing LED script content remains the same)
-    sudo bash -c 'cat > /usr/local/bin/led_monitor.py <<EOL
-#!/usr/bin/env python3
-import time
-import subprocess
-import os
-
-LED_PATH = "/sys/class/leds/ACT"
-
-def setup_led():
-    try:
-        with open(f"{LED_PATH}/trigger", "w") as f:
-            f.write("none")
-        return True
-    except Exception as e:
-        print(f"Error setting up LED: {e}")
-        return False
-
-def set_led_state(state):
-    try:
-        with open(f"{LED_PATH}/brightness", "w") as f:
-            f.write("0" if state else "1")
-    except Exception as e:
-        print(f"Error controlling LED: {e}")
-
-def check_network_status():
-    try:
-        iwconfig = subprocess.check_output(["iwconfig"], stderr=subprocess.STDOUT).decode("utf-8")
-        if "ESSID:off/any" in iwconfig:
-            return "disconnected"
-        elif "Mode:Master" in iwconfig:
-            return "hotspot"
-        else:
-            return "connected"
-    except:
-        return "error"
-
-def blink_pattern(status):
-    if status == "connected":
-        set_led_state(True)
-        time.sleep(2)
-    elif status == "hotspot":
-        for _ in range(2):
-            set_led_state(True)
-            time.sleep(0.2)
-            set_led_state(False)
-            time.sleep(0.2)
-            set_led_state(True)
-            time.sleep(0.2)
-            set_led_state(False)
-            time.sleep(0.2)
-    elif status == "disconnected":
-        set_led_state(True)
-        time.sleep(1)
-        set_led_state(False)
-        time.sleep(1)
-    else:
-        for _ in range(2):
-            set_led_state(True)
-            time.sleep(0.1)
-            set_led_state(False)
-            time.sleep(0.1)
-        time.sleep(1)
-
-def cleanup():
-    try:
-        with open(f"{LED_PATH}/trigger", "w") as f:
-            f.write("mmc0")
-    except Exception as e:
-        print(f"Error restoring LED trigger: {e}")
-
-def main():
-    if not os.geteuid() == 0:
-        print("This script must be run with sudo!")
-        return
-
-    if not setup_led():
-        return
-
-    try:
-        while True:
-            status = check_network_status()
-            blink_pattern(status)
-            time.sleep(3)
-    except KeyboardInterrupt:
-        cleanup()
-
-if __name__ == "__main__":
-    main()
-EOL'
-
-    echo "Making LED monitor script executable..."
-    sudo chmod +x /usr/local/bin/led_monitor.py
-
-    echo "Creating LED monitor service..."
-    sudo bash -c 'cat > /etc/systemd/system/led-monitor.service <<EOL
-[Unit]
-Description=Network Status LED Monitor
-After=network.target
-
-[Service]
-Type=simple
-User=root
-ExecStart=/usr/local/bin/led_monitor.py
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOL'
-
-    sudo systemctl enable led-monitor
-    sudo systemctl start led-monitor
-
-    echo "Checking LED monitor service status..."
-    sudo systemctl status led-monitor --no-pager
-}
-
-install_rpi_specific() {
-    echo "Installing Raspberry Pi specific components..."
-
-    sudo apt-get update
-    
-    # Install RPI-specific dependencies
-    sudo apt-get install -y libgl1-mesa-glx dnsmasq v4l-utils
-    
-    # Configure LED monitoring
-    configure_led_monitoring
-    
-    # Configure Bluetooth
-    echo "Installing BT connectivity..."
-    if [ -n "$COUNTRY" ]; then
-        curl -L https://raw.githubusercontent.com/oulianov/Rpi-SetWiFi-viaBluetooth/refs/heads/main/btwifisetInstall.sh | bash -s -- --yes --country "$COUNTRY"
-    else
-        curl -L https://raw.githubusercontent.com/oulianov/Rpi-SetWiFi-viaBluetooth/refs/heads/main/btwifisetInstall.sh | bash -s -- --yes
-    fi
-}
-
-install_darwin_specific() {
-    echo "Installing macOS specific components..."
-
-    # Check if Homebrew is installed
-    if ! command -v brew >/dev/null 2>&1; then
-        echo "Error: Homebrew is not installed. Please install it first."
-        echo "Visit https://brew.sh for installation instructions."
-        exit 1
-    fi
-
-    # Update Homebrew before installing phosphobot
-    brew update
-}
-
-install_linux_specific() {
-    echo "Installing Linux specific components..."
-
-    sudo apt-get update
-    
-    # Install Linux-specific dependencies
-    sudo apt-get install -y curl gnupg libgl1-mesa-glx dnsmasq v4l-utils ethtool can-utils 
-}
-
-setup_services() {
-        echo "Stopping any existing phosphobot services and processes..."
-        sudo systemctl stop phosphobot.service 2>/dev/null || true
-        sudo systemctl disable phosphobot.service 2>/dev/null || true
-        sudo pkill -f "phosphobot run" 2>/dev/null || true
-        sudo systemctl stop phosphobot-update 2>/dev/null || true
-
-        echo "Creating systemd service file for phosphobot..."
-        sudo bash -c 'cat > /etc/systemd/system/phosphobot.service <<EOL
-[Unit]
-Description=Phosphobot FastAPI Service
-After=network.target
-
-[Service]
-Type=simple
-User=root
-ExecStart=/usr/local/bin/phosphobot run
-Restart=always
-WorkingDirectory=/root
-Environment="PATH=/usr/local/bin:/usr/bin"
-
-[Install]
-WantedBy=multi-user.target
-EOL'
-
-        # Create and configure update service
-        echo "Creating update script and service..."
-    sudo bash -c 'cat > /usr/local/bin/phosphobot-update <<EOL
-#!/bin/bash
-
-apt update
-apt install -y phosphobot
-if [ \$? -eq 0 ]; then
-    systemctl restart phosphobot
+# If we're already inside the repo, use that
+if [ -f "$(pwd)/phosphobot/pyproject.toml" ]; then
+    INSTALL_DIR="$(pwd)"
+    echo "Using existing repo at: $INSTALL_DIR"
+else
+    echo "Install directory: $INSTALL_DIR"
 fi
-EOL'
 
-        sudo chmod +x /usr/local/bin/phosphobot-update
+# ============================================
+# 1. System dependencies
+# ============================================
+echo ""
+echo "[1/6] Installing system dependencies..."
+sudo apt-get update -qq
+sudo apt-get install -y -qq \
+    git curl wget build-essential \
+    python3-dev python3-pip \
+    libgl1-mesa-glx libglib2.0-0 \
+    libudev-dev \
+    v4l-utils \
+    2>/dev/null
 
-        sudo bash -c 'cat > /etc/systemd/system/phosphobot-update.service <<EOL
-[Unit]
-Description=Phosphobot Update Service
-After=network.target
-Wants=network-online.target
+# Add user to dialout group for serial port access (SO-100 robots)
+if ! groups "$USER" | grep -q dialout; then
+    sudo usermod -aG dialout "$USER"
+    echo "  Added $USER to dialout group (re-login required for serial access)"
+fi
 
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/phosphobot-update
-RemainAfterExit=no
-StandardOutput=journal
+# ============================================
+# 2. Install uv (Python package manager)
+# ============================================
+echo ""
+echo "[2/6] Installing uv..."
+if ! command -v uv &> /dev/null; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    echo "  uv installed"
+else
+    echo "  uv already installed ($(uv --version))"
+fi
 
-[Install]
-WantedBy=multi-user.target
-EOL'
-
-        sudo bash -c 'cat > /etc/systemd/system/phosphobot-update.timer <<EOL
-[Unit]
-Description=Run Phosphobot update on boot
-
-[Timer]
-OnBootSec=2min
-Unit=phosphobot-update.service
-
-[Install]
-WantedBy=timers.target
-EOL'
-
-        # Reload and enable services
-        sudo systemctl daemon-reload
-        sudo systemctl enable phosphobot
-        sudo systemctl enable phosphobot-update.timer
-        sudo systemctl start phosphobot
-        sudo systemctl start phosphobot-update.timer
-
-        echo "Checking phosphobot service status..."
-        sudo systemctl status phosphobot --no-pager
-
-        echo "Checking update timer status..."
-        sudo systemctl list-timers phosphobot-update.timer --no-pager
-}
-
-# Main installation flow
-main() {
-    # Detect platform
-    detect_platform
-    # Check if we are sudo (to install packages)
-    check_privileges
-
-    # Get and create platform-specific installation directory
-    INSTALL_DIR=$(get_install_dir)
-    echo "Creating installation directory: $INSTALL_DIR"
-    mkdir -p "$INSTALL_DIR"
-    cd "$INSTALL_DIR" || {
-        echo "Error: Failed to change to installation directory"
-        exit 1
-    }
-
-    # Platform-specific installation
-    case "$PLATFORM" in
-        "rpi")
-            echo "Starting Raspberry Pi installation..."
-            install_rpi_specific
-            ;;
-        "darwin")
-            echo "Starting macOS installation..."
-            install_darwin_specific
-            ;;
-        "linux"|"wsl")
-            echo "Starting Linux installation..."
-            install_linux_specific
-            ;;
-        *)
-            echo "Error: Unsupported platform"
-            exit 1
-            ;;
-    esac
-
-    # Common installation steps
-    if [[ "$PLATFORM" != "darwin" ]]; then
-        echo "Installing phosphobot..."
-        # Note: if you see the following warning:
-        # W: https://europe-west1-apt.pkg.dev/projects/portal-385519/dists/phospho-apt/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
-        # This is because we used to use apt-key and to store keyrings in /etc/apt/trusted.gpg, which is deprecated.
-        # We now use /etc/apt/keyrings/phosphobot-archive-keyring
-        # To remove the warning, run the following command:
-        # deb [signed-by=/etc/apt/keyrings/google-cloud-official-archive-keyring.gpg] https://europe-west1-apt.pkg.dev/projects/portal-385519 phospho-apt main
-        # This will create the keyring file in the correct location.
-
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://europe-west1-apt.pkg.dev/doc/repo-signing-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/phosphobot-archive-keyring.gpg
-
-        echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/phosphobot-archive-keyring.gpg] https://europe-west1-apt.pkg.dev/projects/portal-385519 phospho-apt main" | sudo tee /etc/apt/sources.list.d/phosphobot.list > /dev/null
-        sudo apt update
-        sudo apt install -y phosphobot
-    else
-        echo "Installing phosphobot via Homebrew..."
-        brew tap phospho-app/phosphobot
-        brew install phosphobot
+# ============================================
+# 3. Install Node.js (for dashboard)
+# ============================================
+echo ""
+echo "[3/6] Installing Node.js..."
+if ! command -v node &> /dev/null; then
+    # Install via nvm
+    if [ ! -d "$HOME/.nvm" ]; then
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
     fi
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    nvm install 20
+    nvm use 20
+    echo "  Node.js $(node --version) installed"
+else
+    echo "  Node.js already installed ($(node --version))"
+fi
 
-    # Setup services
-    if [[ "$PLATFORM" == "rpi" ]]; then
-        setup_services
-    fi
+# ============================================
+# 4. Clone/update the repository
+# ============================================
+echo ""
+echo "[4/6] Setting up repository..."
+if [ ! -f "$INSTALL_DIR/phosphobot/pyproject.toml" ]; then
+    git clone https://github.com/Disniekie01/phosphobot.git "$INSTALL_DIR"
+    echo "  Cloned to $INSTALL_DIR"
+else
+    echo "  Repository already exists at $INSTALL_DIR"
+fi
+cd "$INSTALL_DIR"
 
-    # Display status information
-    echo "IP address of the device:"
+# ============================================
+# 5. Install Python dependencies & build dashboard
+# ============================================
+echo ""
+echo "[5/6] Installing Python dependencies..."
+cd "$INSTALL_DIR/phosphobot"
+uv sync --python 3.10
+echo "  Python dependencies installed"
 
-    # Commands to get IP address based on platform
-    if [[ "$PLATFORM" == "darwin" ]]; then
-        ipconfig getifaddr en0
-    else
-        hostname -I
-    fi
+echo ""
+echo "Building dashboard..."
+cd "$INSTALL_DIR/dashboard"
 
-    echo "Installation completed for platform: $PLATFORM"
+# Ensure nvm is loaded
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-}
+npm install --silent 2>/dev/null
+npm run build
+mkdir -p "$INSTALL_DIR/phosphobot/resources/dist/"
+cp -r ./dist/* "$INSTALL_DIR/phosphobot/resources/dist/"
+echo "  Dashboard built"
 
-# Run main installation
-main
+# ============================================
+# 6. Install ROS2 bridge (optional - only if ROS2 is available)
+# ============================================
+echo ""
+echo "[6/6] ROS2 bridge setup..."
+if [ -f "/opt/ros/humble/setup.bash" ]; then
+    echo "  ROS2 Humble detected, building bridge..."
+    source /opt/ros/humble/setup.bash
+    cd "$INSTALL_DIR/so-arm101-ros2-bridge"
+    colcon build 2>/dev/null
+    echo "  ROS2 bridge built"
+    echo "  Source it with: source $INSTALL_DIR/so-arm101-ros2-bridge/install/setup.bash"
+else
+    echo "  ROS2 not found - skipping bridge build (optional)"
+    echo "  Install ROS2 Humble if you need Isaac Sim integration"
+fi
+
+# ============================================
+# Done!
+# ============================================
+echo ""
+echo "============================================"
+echo "  Installation complete!"
+echo "============================================"
+echo ""
+echo "To start IRL Robotics:"
+echo "  cd $INSTALL_DIR/phosphobot"
+echo "  uv run --python 3.10 irlrobotics run"
+echo ""
+echo "Or use make:"
+echo "  cd $INSTALL_DIR"
+echo "  make prod"
+echo ""
+echo "Dashboard will be at: http://localhost:8020"
+echo ""
+echo "NOTE: If this is first run, you may need to:"
+echo "  1. Re-login for serial port access (dialout group)"
+echo "  2. Run 'sudo chmod 666 /dev/ttyACM*' for immediate access"
+echo "  3. Calibrate your robots through the dashboard"
+echo ""

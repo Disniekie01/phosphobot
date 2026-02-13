@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Bool
+import requests
+
+class PhosphoHttpTeleop(Node):
+    def __init__(self):
+        super().__init__('phospho_http_teleop')
+        
+        # Publishers for Isaac Sim integration (matching joint_state_reader pattern)
+        self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
+        self.gripper_pub = self.create_publisher(Bool, '/robot/gripper', 10)
+        
+        # Parameters
+        self.declare_parameter('phospho_url', 'http://192.168.1.97:8020')
+        self.declare_parameter('poll_rate', 0.02)  # 50 Hz for responsive mirroring
+        self.declare_parameter('robot_id', 0)
+        
+        self.phospho_url = self.get_parameter('phospho_url').value
+        self.poll_rate = self.get_parameter('poll_rate').value
+        self.robot_id = self.get_parameter('robot_id').value
+        
+        # Reusable HTTP session for connection pooling (avoids TCP handshake each request)
+        self.session = requests.Session()
+        
+        # Robot state tracking
+        self.is_gripper_closed = False
+        self.poll_count = 0
+        self.error_count = 0
+        
+        # Joint names for SO-ARM101 (matching Isaac Sim expectations)
+        self.joint_names = [
+            'Rotation',      # Base rotation
+            'Pitch',         # Shoulder pitch  
+            'Elbow',         # Elbow
+            'Wrist_Pitch',   # Wrist pitch
+            'Wrist_Roll',    # Wrist roll
+            'Jaw'            # Gripper
+        ]
+        
+        # URDF joint limits (min, max) in radians - clamp to these
+        self.joint_limits = [
+            (-1.6, 1.6),       # Rotation
+            (-1.5708, 1.5708), # Pitch
+            (-1.6, 1.4),       # Elbow
+            (-1.67, 1.67),     # Wrist_Pitch
+            (-3.14, 3.14),     # Wrist_Roll
+            (-0.21, 1.5),      # Jaw
+        ]
+        
+        # Timer for polling - single fast timer, reads joints directly
+        self.timer = self.create_timer(self.poll_rate, self.poll_joints)
+        
+        self.get_logger().info(f'Phospho HTTP Teleop started at {1.0/self.poll_rate:.0f} Hz')
+        self.get_logger().info(f'API: {self.phospho_url} | robot_id: {self.robot_id}')
+        
+    def poll_joints(self):
+        """Fast poll: read joints directly and publish to Isaac Sim"""
+        try:
+            # Single HTTP request - go straight to /joints/read
+            response = self.session.post(
+                f"{self.phospho_url}/joints/read",
+                json={"robot_id": self.robot_id},
+                timeout=0.1  # 100ms timeout - fail fast
+            )
+            
+            if response.status_code != 200:
+                self.error_count += 1
+                if self.error_count % 50 == 1:
+                    self.get_logger().warn(f'joints/read returned {response.status_code}')
+                return
+            
+            joint_data = response.json()
+            real_joint_angles = joint_data.get('angles', [])
+            
+            if not real_joint_angles or len(real_joint_angles) < 6:
+                return
+            
+            # Clamp joint angles to URDF limits for Isaac Sim
+            clamped = []
+            for i, angle in enumerate(real_joint_angles[:6]):
+                if angle is None:
+                    clamped.append(0.0)
+                    continue
+                lo, hi = self.joint_limits[i]
+                clamped.append(max(lo, min(hi, angle)))
+            
+            # Publish joint states
+            joint_state = JointState()
+            joint_state.header.stamp = self.get_clock().now().to_msg()
+            joint_state.name = self.joint_names
+            joint_state.position = clamped
+            self.joint_pub.publish(joint_state)
+            
+            self.poll_count += 1
+            self.error_count = 0
+            
+            # Log only every 5 seconds (at 50Hz that's every 250 cycles)
+            if self.poll_count % 250 == 0:
+                self.get_logger().info(
+                    f'[{self.poll_count}] joints: [{", ".join(f"{a:.2f}" for a in clamped)}]'
+                )
+                
+        except requests.exceptions.Timeout:
+            self.error_count += 1
+            if self.error_count % 50 == 1:
+                self.get_logger().warn(f'HTTP timeout ({self.error_count} errors)')
+        except requests.exceptions.ConnectionError:
+            self.error_count += 1
+            if self.error_count % 50 == 1:
+                self.get_logger().warn(f'Connection error - is server running? ({self.error_count} errors)')
+        except Exception as e:
+            self.error_count += 1
+            if self.error_count % 50 == 1:
+                self.get_logger().warn(f'Error: {e}')
+    
+    def destroy_node(self):
+        """Clean up HTTP session on shutdown"""
+        self.session.close()
+        super().destroy_node()
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = PhosphoHttpTeleop()
+    
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main() 

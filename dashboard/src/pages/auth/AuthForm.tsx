@@ -19,10 +19,10 @@ export function AuthForm() {
   // Determine the title based on the current path
   const getTitle = () => {
     if (location.pathname.includes("sign-in")) {
-      return "Sign in to your phosphobot account";
+      return "Sign in to your IRL Robotics account";
     }
     if (location.pathname.includes("sign-up")) {
-      return "Create a new phosphobot account";
+      return "Create a new IRL Robotics account";
     }
   };
 
@@ -74,7 +74,7 @@ export function AuthForm() {
           </CardTitle>
           <p className="text-sm text-muted-foreground text-center">
             {location.pathname.includes("sign-up") &&
-              "Create an account to enable the AI features in phosphobot."}
+              "Create an account to enable the AI features in IRL Robotics."}
           </p>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

@@ -1,8 +1,8 @@
 [project]
-name = "phosphobot"
-version = "0.3.134"
-description = "The AI-ready robotics dev kit, with built-in remote control and VLA support."
-authors = [{ name = "phospho", email = "contact@phospho.ai" }]
+name = "irl-robotics"
+version = "1.0.0"
+description = "IRL Robotics - Control AI robots, record datasets, train and deploy action models."
+authors = [{ name = "Disniekie", email = "disniekie@irlrobotics.dev" }]
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -85,6 +85,7 @@ default-groups = ["dev"]
 
 
 [project.scripts]
+irlrobotics = "phosphobot.main:cli"
 phosphobot = "phosphobot.main:cli"
 
 [build-system]

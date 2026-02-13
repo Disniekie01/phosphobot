@@ -49,7 +49,7 @@ interface RobotType {
 const ROBOT_TYPES: RobotType[] = [
   {
     id: "phosphobot",
-    name: "Remote phosphobot server",
+    name: "Remote IRL Robotics server",
     category: "manipulator",
     image: placeholderSvg,
     fields: [
