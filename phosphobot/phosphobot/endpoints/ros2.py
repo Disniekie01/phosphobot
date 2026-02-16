@@ -136,11 +136,12 @@ async def ros2_status() -> ROS2StatusResponse:
 @router.post("/start/teleop", response_model=ROS2ActionResponse)
 async def start_teleop(
     phospho_url: str = "http://localhost:8020",
+    isaac_wrist_roll_offset_rad: float = -2.3562,
 ) -> ROS2ActionResponse:
-    """Start the ROS2 HTTP teleop node."""
+    """Start the ROS2 HTTP teleop node. Pass isaac_wrist_roll_offset_rad so sim gripper roll matches real (no rebuild needed)."""
     cmd = (
         f'ros2 run phospho_teleop phospho_http_teleop '
-        f'--ros-args -p phospho_url:="{phospho_url}"'
+        f'--ros-args -p phospho_url:="{phospho_url}" -p isaac_wrist_roll_offset_rad:={isaac_wrist_roll_offset_rad}'
     )
     ok = await _start_process("http_teleop", cmd)
     if ok:
@@ -155,6 +156,30 @@ async def stop_teleop() -> ROS2ActionResponse:
     """Stop the ROS2 HTTP teleop node."""
     await _stop_process("http_teleop")
     return ROS2ActionResponse(status="ok", message="HTTP teleop node stopped")
+
+
+@router.post("/teleop/wrist_roll_offset", response_model=ROS2ActionResponse)
+async def set_teleop_wrist_roll_offset(value: float) -> ROS2ActionResponse:
+    """Set Isaac Sim gripper roll offset in realtime (radians). Teleop node must be running."""
+    if not (value >= -3.15 and value <= 3.15):
+        return ROS2ActionResponse(status="error", message="Offset must be between -3.15 and 3.15 rad")
+    cmd = _SOURCE_CMD + f"ros2 param set /phospho_http_teleop isaac_wrist_roll_offset_rad {value}"
+    try:
+        proc = await asyncio.create_subprocess_shell(
+            cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            executable="/bin/bash",
+        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
+        if proc.returncode == 0:
+            return ROS2ActionResponse(status="ok", message=f"Offset set to {value:.3f} rad")
+        err = stderr.decode().strip() or "Unknown error"
+        return ROS2ActionResponse(status="error", message=f"param set failed: {err}")
+    except asyncio.TimeoutError:
+        return ROS2ActionResponse(status="error", message="param set timed out")
+    except Exception as e:
+        return ROS2ActionResponse(status="error", message=str(e))
 
 
 @router.post("/start/relays", response_model=ROS2ActionResponse)
@@ -189,9 +214,10 @@ async def stop_relays() -> ROS2ActionResponse:
 @router.post("/start/all", response_model=ROS2ActionResponse)
 async def start_all(
     phospho_url: str = "http://localhost:8020",
+    isaac_wrist_roll_offset_rad: float = -2.3562,
 ) -> ROS2ActionResponse:
     """Start both the teleop node and all relays."""
-    await start_teleop(phospho_url=phospho_url)
+    await start_teleop(phospho_url=phospho_url, isaac_wrist_roll_offset_rad=isaac_wrist_roll_offset_rad)
     await start_relays()
     return ROS2ActionResponse(
         status="ok", message="ROS2 bridge fully started (teleop + relays)"

@@ -19,13 +19,15 @@ class PhosphoHttpTeleop(Node):
         self.declare_parameter('poll_rate', 0.02)  # 50 Hz for responsive mirroring
         self.declare_parameter('robot_id', 0)
         self.declare_parameter('flip_wrist_pitch_for_isaac', False)
-        self.declare_parameter('flip_wrist_roll_for_isaac', False)
+        self.declare_parameter('flip_wrist_roll_for_isaac', True)  # default True: SO-100 URDF has origin rpy="0 -3.14 0" so Isaac axis is inverted vs real robot
+        self.declare_parameter('isaac_wrist_roll_offset_rad', -2.3562)  # -3π/4 rad (~-135°): sim was 45° ahead, so subtract 45° more from sent value
         
         self.phospho_url = self.get_parameter('phospho_url').value
         self.poll_rate = self.get_parameter('poll_rate').value
         self.robot_id = self.get_parameter('robot_id').value
         self.flip_wrist_pitch = self.get_parameter('flip_wrist_pitch_for_isaac').value
         self.flip_wrist_roll = self.get_parameter('flip_wrist_roll_for_isaac').value
+        self.wrist_roll_offset = self.get_parameter('isaac_wrist_roll_offset_rad').value
         
         # Reusable HTTP session for connection pooling (avoids TCP handshake each request)
         self.session = requests.Session()
@@ -60,10 +62,16 @@ class PhosphoHttpTeleop(Node):
         
         self.get_logger().info(f'Phospho HTTP Teleop started at {1.0/self.poll_rate:.0f} Hz')
         self.get_logger().info(f'API: {self.phospho_url} | robot_id: {self.robot_id}')
+        if self.flip_wrist_roll:
+            self.get_logger().info('Isaac Sim: Wrist_Roll (gripper rotate) sign flipped to match real robot')
+        if self.wrist_roll_offset != 0.0:
+            self.get_logger().info(f'Isaac Sim: Wrist_Roll offset = {self.wrist_roll_offset:.4f} rad')
         
     def poll_joints(self):
         """Fast poll: read joints directly and publish to Isaac Sim"""
         try:
+            # Re-read offset so dashboard slider updates take effect in realtime
+            self.wrist_roll_offset = self.get_parameter('isaac_wrist_roll_offset_rad').value
             # Single HTTP request - go straight to /joints/read
             response = self.session.post(
                 f"{self.phospho_url}/joints/read",
@@ -97,6 +105,10 @@ class PhosphoHttpTeleop(Node):
                 clamped[3] = -clamped[3]
             if self.flip_wrist_roll and len(clamped) > 4:
                 clamped[4] = -clamped[4]
+            # Offset Wrist_Roll (gripper rotate) so Isaac Sim model latches real rotation (radians)
+            if len(clamped) > 4 and self.wrist_roll_offset != 0.0:
+                clamped[4] = clamped[4] + self.wrist_roll_offset
+                clamped[4] = max(self.joint_limits[4][0], min(self.joint_limits[4][1], clamped[4]))
             
             # Publish joint states
             joint_state = JointState()

@@ -36,6 +36,12 @@ The script:
 
 Limits are **per physical arm** (per serial port). Each arm needs to be updated separately.
 
+**Gripper-rotate (servo 5, Wrist_Roll)** often ships with a narrow Max_Angle_Limit; when the joint reaches it the motor can feel locked. To refresh only that servo:
+
+```bash
+uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0 --write --servo 5
+```
+
 ## STS3215 memory map (relevant)
 
 | Name             | Address | Size | Notes        |

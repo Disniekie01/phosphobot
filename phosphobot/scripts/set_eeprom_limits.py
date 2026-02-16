@@ -10,8 +10,10 @@ Usage (run from phosphobot directory):
   uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0           # read only
   uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0 --write   # read then write full range
   uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM1 --write    # follower arm
+  uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0 --write --servo 5   # only gripper-rotate (Wrist_Roll)
 
 Requires only one arm connected on the given port (servos 1–6).
+Servo 5 = wrist_roll = gripper rotate; if it locks at a limit, set EEPROM to full range (0–4095).
 """
 
 from __future__ import annotations
@@ -58,7 +60,14 @@ def main() -> None:
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Write Min=0 and Max=4095 to all servos (unlocks EEPROM, then writes).",
+        help="Write Min=0 and Max=4095 (unlocks EEPROM, then writes).",
+    )
+    parser.add_argument(
+        "--servo",
+        type=int,
+        default=None,
+        metavar="N",
+        help="If set with --write, only update this servo (1–6). e.g. 5 = gripper rotate (Wrist_Roll).",
     )
     args = parser.parse_args()
 
@@ -81,21 +90,38 @@ def main() -> None:
         print("\nCurrent EEPROM angle limits (servo 1–6):")
         print("  Servo     Min_Angle_Limit  Max_Angle_Limit")
         for i, name in enumerate(SO100_MOTORS):
-            print(f"  {i+1} {name:14} {min_limits[i]:>10}        {max_limits[i]:>10}")
+            mark = "  <-- gripper rotate" if (i + 1) == 5 else ""
+            print(f"  {i+1} {name:14} {min_limits[i]:>10}        {max_limits[i]:>10}{mark}")
+        if min_limits[4] != FULL_MIN or max_limits[4] != FULL_MAX:
+            print("  (Servo 5 wrist_roll not full range; use --write [--servo 5] to fix locking at limit.)")
 
         if not args.write:
             print("\nNo write requested. Use --write to set all to Min=0, Max=4095.")
             return
 
-        # Set full range for all 6 servos
-        bus.write("Min_Angle_Limit", [FULL_MIN] * 6)
-        bus.write("Max_Angle_Limit", [FULL_MAX] * 6)
-        print(f"\nWritten Min_Angle_Limit={FULL_MIN}, Max_Angle_Limit={FULL_MAX} for all servos.")
+        # Which servos to update
+        if args.servo is not None:
+            if not (1 <= args.servo <= 6):
+                print(f"Error: --servo must be 1–6, got {args.servo}")
+                return
+            indices = [args.servo - 1]
+            print(f"\nUpdating only servo {args.servo} ({list(SO100_MOTORS.keys())[args.servo - 1]}).")
+        else:
+            indices = list(range(6))
+
+        # Build vectors: only change selected servos
+        min_vals = [FULL_MIN if i in indices else min_limits[i] for i in range(6)]
+        max_vals = [FULL_MAX if i in indices else max_limits[i] for i in range(6)]
+        bus.write("Min_Angle_Limit", min_vals)
+        bus.write("Max_Angle_Limit", max_vals)
+        print(f"Written Min_Angle_Limit={FULL_MIN}, Max_Angle_Limit={FULL_MAX} for selected servo(s).")
 
         # Verify
         min_after = bus.read("Min_Angle_Limit")
         max_after = bus.read("Max_Angle_Limit")
-        ok = all(m == FULL_MIN for m in min_after) and all(m == FULL_MAX for m in max_after)
+        ok = all(min_after[i] == (FULL_MIN if i in indices else min_limits[i]) for i in range(6)) and all(
+            max_after[i] == (FULL_MAX if i in indices else max_limits[i]) for i in range(6)
+        )
         if ok:
             print("Verified: limits updated successfully.")
         else:

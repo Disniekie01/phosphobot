@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertCircle,
@@ -22,7 +23,7 @@ import {
   RefreshCw,
   Unplug,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ProcessStatus {
   name: string;
@@ -56,6 +57,8 @@ const PROCESS_LABELS: Record<string, { label: string; description: string }> = {
 export function ROS2BridgePage() {
   const [processes, setProcesses] = useState<ProcessStatus[]>([]);
   const [phosphoUrl, setPhosphoUrl] = useState("http://localhost:8020");
+  const [wristRollOffset, setWristRollOffset] = useState(-2.3562);
+  const wristRollOffsetDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState<{
     text: string;
@@ -198,7 +201,10 @@ export function ROS2BridgePage() {
                 "/ros2/start/all",
                 "Start All",
                 "start_all",
-                { phospho_url: phosphoUrl },
+                {
+                  phospho_url: phosphoUrl,
+                  isaac_wrist_roll_offset_rad: String(wristRollOffset),
+                },
               )
             }
             disabled={loading["start_all"]}
@@ -265,6 +271,35 @@ export function ROS2BridgePage() {
               />
             </div>
           </div>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Isaac Sim gripper roll offset (rad)</Label>
+              <div className="flex items-center gap-3">
+                <Slider
+                  min={-3.14}
+                  max={3.14}
+                  step={0.02}
+                  value={[wristRollOffset]}
+                  onValueChange={([v]) => {
+                    setWristRollOffset(v);
+                    if (!teleopRunning) return;
+                    if (wristRollOffsetDebounce.current) clearTimeout(wristRollOffsetDebounce.current);
+                    wristRollOffsetDebounce.current = setTimeout(() => {
+                      fetch(`/ros2/teleop/wrist_roll_offset?value=${v}`, { method: "POST" })
+                        .then((r) => r.json())
+                        .then((d) => d.status === "ok" && showMessage(d.message, "success"));
+                    }, 120);
+                  }}
+                  className="w-48"
+                />
+                <span className="text-sm tabular-nums w-20">
+                  {wristRollOffset.toFixed(2)} rad
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tune so Isaac Sim gripper rotation matches the real robot (realtime when teleop is running).
+              </p>
+            </div>
           <div className="flex gap-3">
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
@@ -273,7 +308,10 @@ export function ROS2BridgePage() {
                   "/ros2/start/teleop",
                   "Start Teleop",
                   "start_teleop",
-                  { phospho_url: phosphoUrl },
+                  {
+                    phospho_url: phosphoUrl,
+                    isaac_wrist_roll_offset_rad: String(wristRollOffset),
+                  },
                 )
               }
               disabled={loading["start_teleop"] || !!teleopRunning}
@@ -299,6 +337,7 @@ export function ROS2BridgePage() {
               )}
               Stop Teleop
             </Button>
+          </div>
           </div>
         </CardContent>
       </Card>
