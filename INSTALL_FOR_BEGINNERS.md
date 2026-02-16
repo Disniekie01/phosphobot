@@ -71,6 +71,27 @@ git lfs pull
 
 ---
 
+**Step 3b — Get the submodules (docs and bullet3)**
+
+This repo uses **submodules** for the `docs` and `bullet3` folders. After cloning, run:
+
+```bash
+cd ~/phosphobot
+git submodule update --init --recursive
+```
+
+That downloads the contents of those folders. You only need to do this once after the first clone.
+
+**Optional:** To clone and fetch submodules in one go, use:
+
+```bash
+git clone --recurse-submodules https://github.com/Disniekie01/phosphobot.git
+```
+
+Then continue with Step 4.
+
+---
+
 **Step 4 — Run the install script**
 
 This installs Python, Node, and other things the project needs. Paste this and press Enter:
@@ -210,6 +231,7 @@ Use your actual port instead of `/dev/ttyACM0` if needed.
 | What you want to do | Commands |
 |---------------------|----------|
 | **Install Git LFS (before first clone)** | `sudo apt-get install -y git-lfs` then `git lfs install` |
+| **Get submodules after clone** | `cd ~/phosphobot` then `git submodule update --init --recursive` |
 | **First-time install** | `cd ~` then `git clone ...` then `cd ~/phosphobot && bash install.sh` |
 | **Build dashboard** | `cd ~/phosphobot` then `make build_frontend` |
 | **Start the app** | `cd ~/phosphobot/phosphobot` then `uv run irlrobotics run --port 8020 --no-telemetry` then open **http://localhost:8020** in browser |
@@ -245,5 +267,6 @@ The **UI** is the web page you see at http://localhost:8020 (buttons, sliders, c
 - **Permission denied on /dev/ttyACM0** — Run `sudo chmod 666 /dev/ttyACM*` (you may need to after each reboot).
 - **Script says “only one arm”** — Unplug all arms, plug in only the one you want to change, and run the command again.
 - **USD files missing or very small** — See “USD files missing” in the UI section above (install Git LFS and run `git lfs pull`).
+- **docs or bullet3 folder is empty** — Run `cd ~/phosphobot` then `git submodule update --init --recursive`. Or clone with `git clone --recurse-submodules https://github.com/Disniekie01/phosphobot.git`.
 
 If you’re still stuck, check **HOW_TO_RUN.md** and **phosphobot/docs/SERVO_EEPROM_LIMITS.md** in the project for more detail.
