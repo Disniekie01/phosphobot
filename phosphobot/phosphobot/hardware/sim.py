@@ -51,7 +51,10 @@ class PyBulletSimulation:
         Initialize the pybullet simulation environment based on the configuration.
         """
         if self.sim_mode == SimulationMode.headless:
-            p.connect(p.DIRECT)
+            conn_id = p.connect(p.DIRECT)
+            if conn_id < 0:
+                self.connected = False
+                raise RuntimeError("PyBullet headless connection failed")
             p.setGravity(0, 0, -9.81)
             p.setTimeStep(1.0 / 10)  # 10 Hz simulation
             self.connected = True
@@ -83,23 +86,39 @@ class PyBulletSimulation:
                 except Exception as exc:
                     logger.warning(f"Error while reading child stdout: {exc}")
 
+            # Use same Python as main process so numpy/pybullet from phosphobot venv are available
+            main_py = os.path.join(absolute_path, "main.py")
             self._gui_proc = subprocess.Popen(
-                ["uv", "run", "--python", "3.8", "main.py"],
+                [sys.executable, main_py],
                 cwd=absolute_path,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,  # merge stderr into stdout
                 bufsize=0,
+                env=os.environ.copy(),
             )
             t = threading.Thread(
                 target=_stream_to_console, args=(self._gui_proc.stdout,), daemon=True
             )
             t.start()
 
-            # Wait for 1 second to allow the simulation to start
-            time.sleep(1)
-            p.connect(p.SHARED_MEMORY)
-            self.connected = True
-            logger.debug("Simulation: GUI mode enabled")
+            # Wait for GUI subprocess to be ready, then connect via SHARED_MEMORY
+            max_attempts = 15
+            for attempt in range(max_attempts):
+                time.sleep(1)
+                conn_id = p.connect(p.SHARED_MEMORY)
+                if conn_id >= 0 and p.isConnected():
+                    self.connected = True
+                    logger.debug("Simulation: GUI mode enabled")
+                    break
+                if attempt < max_attempts - 1:
+                    logger.debug(
+                        f"GUI sim not ready yet (attempt {attempt + 1}/{max_attempts}), retrying..."
+                    )
+            else:
+                self.connected = False
+                logger.warning(
+                    "Could not connect to PyBullet GUI subprocess. Run with --simulation=headless for simulation without a window."
+                )
 
         else:
             raise ValueError("Invalid simulation mode")
@@ -196,7 +215,7 @@ class PyBulletSimulation:
         Reset the simulation environment.
         """
         if not self.connected or not p.isConnected():
-            logger.warning("Simulation is not connected, cannot reset")
+            logger.debug("Simulation is not connected, cannot reset")
             return
 
         p.resetSimulation()

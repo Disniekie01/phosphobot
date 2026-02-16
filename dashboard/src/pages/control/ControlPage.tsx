@@ -14,6 +14,7 @@ import {
   Hand,
   Keyboard,
   RectangleGoggles,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -21,6 +22,7 @@ import { GamepadControl } from "./GamepadControlPage";
 import { KeyboardControl } from "./KeyboardControlPage";
 import { LeaderArmControl } from "./LeaderArmControlPage";
 import { SingleArmReplay } from "./SingleArmReplayPage";
+import { SlidersControl } from "./SlidersControlPage";
 import { VRControl } from "./VRControlPage";
 
 export function ControlPage() {
@@ -71,6 +73,12 @@ export function ControlPage() {
       icon: Hand,
       label: "By hand",
       tooltip: "Move with your hands",
+    },
+    {
+      value: "sliders",
+      icon: SlidersHorizontal,
+      label: "Sliders",
+      tooltip: "Slider control (relative move)",
     },
     { value: "VR", icon: RectangleGoggles, label: "VR", tooltip: "VR control" },
   ];
@@ -130,6 +138,9 @@ export function ControlPage() {
         </TabsContent>
         <TabsContent value="single">
           <SingleArmReplay />
+        </TabsContent>
+        <TabsContent value="sliders">
+          <SlidersControl />
         </TabsContent>
         <TabsContent value="VR">
           <VRControl />

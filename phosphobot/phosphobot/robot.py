@@ -134,13 +134,23 @@ class RobotConnectionManager:
         """
 
         sim = get_sim()
-        sim.reset()
+        if sim.connected:
+            sim.reset()
         self._all_robots = []
 
-        # If we are only simulating, we can just use the SO100Hardware class
+        # If we are only simulating, use SO100Hardware once the sim is connected
         if config.ONLY_SIMULATION:
-            logger.debug("ONLY_SIMULATION is set to True. Using SO-100 in simulation.")
-            self._all_robots = [SO100Hardware(only_simulation=True)]
+            if sim.connected:
+                logger.debug("ONLY_SIMULATION is set to True. Using SO-100 in simulation.")
+                self._all_robots = [SO100Hardware(only_simulation=True)]
+            else:
+                if not getattr(RobotConnectionManager, "_sim_not_connected_warned", False):
+                    logger.warning(
+                        "Simulation not connected (e.g. GUI subprocess not ready). "
+                        "Use --simulation=headless for simulated robot without a window, or wait and retry."
+                    )
+                    RobotConnectionManager._sim_not_connected_warned = True
+                self._all_robots = []
             return
 
         # Keep track of connected devices by port name and serial to avoid duplicates

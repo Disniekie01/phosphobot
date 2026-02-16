@@ -12,6 +12,7 @@ import { ResetPassword } from "@/pages/auth/ResetPassword";
 import { ROS2BridgePage } from "@/pages/ROS2BridgePage";
 import { CalibrationPage } from "@/pages/calibration/CalibrationPage";
 import { ControlPage } from "@/pages/control/ControlPage";
+import { MobileControlPage } from "@/pages/control/MobileControlPage";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<DashboardPage />} />
           <Route path="/control" element={<ControlPage />} />
+          <Route path="/mobile" element={<MobileControlPage />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/browse/:path" element={<BrowsePage />} />
           <Route path="/admin" element={<AdminPage />} />

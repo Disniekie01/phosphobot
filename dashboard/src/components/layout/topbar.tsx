@@ -31,6 +31,7 @@ import useSWR from "swr";
 const routeMap = [
   { path: "/", title: "Dashboard" },
   { path: "/control", title: "Robot Control" },
+  { path: "/mobile", title: "Phone control" },
   { path: "/calibration", title: "Calibration" },
   { path: "/inference", title: "AI Control" },
   { path: "/admin", title: "Admin Configuration" },

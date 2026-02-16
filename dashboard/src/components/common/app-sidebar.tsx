@@ -18,6 +18,7 @@ import {
   Play,
   Radio,
   Sliders,
+  Smartphone,
 } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 
@@ -56,6 +57,17 @@ export function AppSidebar() {
                   <Link to="/control">
                     <Play className="h-5 w-5 text-green-500" />
                     <span>Control Robot</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={currentPath === "/mobile"}
+                >
+                  <Link to="/mobile">
+                    <Smartphone className="h-5 w-5" />
+                    <span>Phone control</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

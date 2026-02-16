@@ -7,8 +7,9 @@ print(
     f"Starting PyBullet simulation in GUI mode. Python version: {sys.version} (recommended: Python 3.8)"
 )
 
-# Connect to PyBullet
-p.connect(p.GUI_SERVER)
+# Connect to PyBullet with fixed window size so it's easy to find
+p.connect(p.GUI_SERVER, options="--width=1024 --height=768")
+print("PyBullet GUI window opened (1024x768). If you don't see it: check taskbar, Alt+Tab, or another workspace; or run with --simulation=headless for no window.")
 time.sleep(1)  # Wait for the GUI to initialize
 
 p.resetDebugVisualizerCamera(

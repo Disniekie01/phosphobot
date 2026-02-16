@@ -74,6 +74,7 @@ INDEX_PATH = get_resources_path() / "dist" / "index.html"
 @router.get("/network", response_class=HTMLResponse)
 @router.get("/browse", response_class=HTMLResponse)
 @router.get("/control", response_class=HTMLResponse)
+@router.get("/mobile", response_class=HTMLResponse)
 @router.get("/train", response_class=HTMLResponse)
 @router.get("/inference", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
