@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import json
+import os
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
@@ -9,6 +11,9 @@ import time
 import struct
 import math
 import numpy as np
+
+# SO-100 / STS3215: 12-bit resolution, 0-4095 ticks
+RESOLUTION = 4096  # 4095 usable; backend uses (RESOLUTION - 1) in conversion
 
 class JointStateReader(Node):
     def __init__(self):
@@ -20,13 +25,33 @@ class JointStateReader(Node):
         # NEW: Publisher for pose deltas (Twist) - IK Teleoperation
         self.twist_pub = self.create_publisher(Twist, '/robot/cmd_pose', 10)
         
+        # Calibration: load offsets and signs to match phosphobot backend (same formula as _units_vec_to_radians)
+        self.declare_parameter('calibration_config_path', '')
+        cal_path = self.get_parameter('calibration_config_path').value
+        self.servos_offsets = [2048] * 6
+        self.servos_offsets_signs = [1.0] * 6
+        self.servos_offsets_signs[0] = -1.0  # Rotation: default SO-100 sign
+        if cal_path and os.path.isfile(cal_path):
+            try:
+                with open(cal_path) as f:
+                    cal = json.load(f)
+                self.servos_offsets = cal.get('servos_offsets', self.servos_offsets)[:6]
+                self.servos_offsets_signs = cal.get('servos_offsets_signs', self.servos_offsets_signs)[:6]
+                self.get_logger().info(f"Using calibration from {cal_path} (offsets 4,5: {self.servos_offsets[3]}, {self.servos_offsets[4]})")
+            except Exception as e:
+                self.get_logger().warn(f"Could not load calibration {cal_path}: {e}. Using defaults.")
+        else:
+            self.get_logger().warn(
+                "No calibration_config_path or file not found. Set it to match your robot so Wrist_Pitch/Wrist_Roll (servos 4,5) are correct for Isaac Sim."
+            )
+        
         # Joint names for SO100 robot (matching Isaac Lab convention)
         self.joint_names = [
             'Rotation',      # Base rotation
             'Pitch',         # Shoulder pitch  
             'Elbow',         # Elbow
-            'Wrist_Pitch',   # Wrist pitch
-            'Wrist_Roll',    # Wrist roll
+            'Wrist_Pitch',   # Wrist pitch  (servo 4)
+            'Wrist_Roll',    # Wrist roll   (servo 5)
             'Jaw'            # Gripper
         ]
         
@@ -144,15 +169,16 @@ class JointStateReader(Node):
         return None
     
     def ticks_to_radians(self, ticks, joint_idx):
-        """Convert servo ticks (0-4095) to radians (-π to π)"""
+        """Convert servo ticks (0-4095) to radians using calibration (same formula as phosphobot backend)."""
         if ticks is None:
             return self.last_positions[joint_idx]  # Use last known position
         
-        # Convert to normalized position (-1 to 1)
-        normalized = (ticks - 2048) / 2048.0
-        
-        # Convert to radians (-π to π)
-        return normalized * 3.14159
+        i = min(joint_idx, len(self.servos_offsets) - 1)
+        offset = self.servos_offsets[i]
+        sign = self.servos_offsets_signs[i]
+        # Backend: rad = (units - offset) * sign * (2*pi / (RESOLUTION-1))
+        rad = (ticks - offset) * sign * (2.0 * math.pi / (RESOLUTION - 1))
+        return rad
     
     def dh_transform_matrix(self, a, alpha, d, theta):
         """Compute DH transformation matrix"""

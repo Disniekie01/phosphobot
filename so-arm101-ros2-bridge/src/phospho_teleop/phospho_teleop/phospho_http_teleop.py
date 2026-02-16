@@ -18,10 +18,14 @@ class PhosphoHttpTeleop(Node):
         self.declare_parameter('phospho_url', 'http://192.168.1.97:8020')
         self.declare_parameter('poll_rate', 0.02)  # 50 Hz for responsive mirroring
         self.declare_parameter('robot_id', 0)
+        self.declare_parameter('flip_wrist_pitch_for_isaac', False)
+        self.declare_parameter('flip_wrist_roll_for_isaac', False)
         
         self.phospho_url = self.get_parameter('phospho_url').value
         self.poll_rate = self.get_parameter('poll_rate').value
         self.robot_id = self.get_parameter('robot_id').value
+        self.flip_wrist_pitch = self.get_parameter('flip_wrist_pitch_for_isaac').value
+        self.flip_wrist_roll = self.get_parameter('flip_wrist_roll_for_isaac').value
         
         # Reusable HTTP session for connection pooling (avoids TCP handshake each request)
         self.session = requests.Session()
@@ -87,6 +91,12 @@ class PhosphoHttpTeleop(Node):
                     continue
                 lo, hi = self.joint_limits[i]
                 clamped.append(max(lo, min(hi, angle)))
+            
+            # Optional: flip Wrist_Pitch (index 3) and/or Wrist_Roll (index 4) for Isaac Sim if axes are inverted
+            if self.flip_wrist_pitch and len(clamped) > 3:
+                clamped[3] = -clamped[3]
+            if self.flip_wrist_roll and len(clamped) > 4:
+                clamped[4] = -clamped[4]
             
             # Publish joint states
             joint_state = JointState()

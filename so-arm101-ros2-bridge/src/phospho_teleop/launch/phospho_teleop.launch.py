@@ -18,6 +18,12 @@ def generate_launch_description():
         description='Phospho WebSocket URL'
     )
     
+    # Calibration config for joint_state_reader (so Wrist_Pitch/Wrist_Roll match real robot and Isaac Sim)
+    calibration_config_arg = DeclareLaunchArgument(
+        'calibration_config_path',
+        default_value='',
+        description='Path to SO-100 calibration JSON (e.g. calibration/so-100_5AE6083706_config.json). Required for correct servo 4/5 (wrist) in Isaac Sim.'
+    )
     # Joint state reader node (hardware interface)
     joint_state_reader_node = Node(
         package='jointstatereader',
@@ -27,6 +33,7 @@ def generate_launch_description():
         parameters=[{
             'serial_port': '/dev/ttyACM0',
             'baud_rate': 1000000,
+            'calibration_config_path': LaunchConfiguration('calibration_config_path', default=''),
         }]
     )
     
@@ -58,6 +65,7 @@ def generate_launch_description():
     
     return LaunchDescription([
         websocket_url_arg,
+        calibration_config_arg,
         joint_state_reader_node,
         tf2_broadcaster_node,
         phospho_teleop_node,

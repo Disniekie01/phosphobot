@@ -46,6 +46,11 @@ def generate_launch_description():
         }]
     )
     
+    calibration_config_arg = DeclareLaunchArgument(
+        'calibration_config_path',
+        default_value='',
+        description='Path to SO-100 calibration JSON for joint_state_reader (correct servo 4/5 for Isaac Sim)'
+    )
     # Joint state reader (follower arm - optional for hardware)
     joint_state_reader_node = Node(
         package='jointstatereader',
@@ -55,11 +60,13 @@ def generate_launch_description():
         parameters=[{
             'serial_port': '/dev/ttyACM0',
             'baud_rate': 1000000,
+            'calibration_config_path': LaunchConfiguration('calibration_config_path', default=''),
         }]
     )
     
     return LaunchDescription([
         websocket_url_arg,
+        calibration_config_arg,
         phospho_teleop_node,
         phospho_leader_controller,
         joint_state_reader_node,
