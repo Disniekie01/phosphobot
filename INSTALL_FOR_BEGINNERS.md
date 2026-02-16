@@ -232,9 +232,10 @@ Use your actual port instead of `/dev/ttyACM0` if needed.
 |---------------------|----------|
 | **Install Git LFS (before first clone)** | `sudo apt-get install -y git-lfs` then `git lfs install` |
 | **Get submodules after clone** | `cd ~/phosphobot` then `git submodule update --init --recursive` |
-| **First-time install** | `cd ~` then `git clone ...` then `cd ~/phosphobot && bash install.sh` |
+| **First-time install** | `cd ~` then `git clone https://github.com/Disniekie01/phosphobot.git` then `cd ~/phosphobot && bash install.sh` |
 | **Build dashboard** | `cd ~/phosphobot` then `make build_frontend` |
 | **Start the app** | `cd ~/phosphobot/phosphobot` then `uv run irlrobotics run --port 8020 --no-telemetry` then open **http://localhost:8020** in browser |
+| **Control from phone** | On the same Wi‑Fi, open **http://\<computer-ip\>:8020/mobile** in your phone’s browser for touch-friendly control |
 | **See servo ports** | `ls /dev/ttyACM*` |
 | **Read limits (no change)** | `cd ~/phosphobot/phosphobot` then `uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0` |
 | **Set full limits (one arm)** | Stop server, plug one arm, then `cd ~/phosphobot/phosphobot` then `uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0 --write` |
@@ -248,25 +249,91 @@ The **UI** is the web page you see at http://localhost:8020 (buttons, sliders, c
 
 **What to try, in order:**
 
-**1. Make sure Node.js and npm are installed** — Run `node --version` and `npm --version`. If either is missing, run `cd ~/phosphobot && bash install.sh` again. If you use nvm, load it first: `export NVM_DIR="$HOME/.nvm"` and `[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`, then `make build_frontend`.
+**1. Make sure Node.js and npm are installed**
 
-**2. Build from the repo root** — Always run `cd ~/phosphobot` then `make build_frontend`.
+In the terminal, run:
 
-**3. Clean and rebuild** — `cd ~/phosphobot/dashboard`, then `rm -rf node_modules dist`, then `npm install`, then `npm run build`. Then copy: `mkdir -p ~/phosphobot/phosphobot/resources/dist` and `cp -r ~/phosphobot/dashboard/dist/* ~/phosphobot/phosphobot/resources/dist/`.
+```bash
+node --version
+npm --version
+```
 
-**4. Common errors** — “npm ERR!” / “node-gyp”: try step 3 or `npm install --legacy-peer-deps`. “EACCES”: don’t use `sudo` with npm; use `sudo chown -R $USER:$USER ~/phosphobot`. “dist directory does not exist”: run `make build_frontend` again.
+- If you see “command not found”, Node is missing. Run the install script again so it can install Node (e.g. via nvm):
 
-**5. USD files missing or very small after clone** — Install Git LFS: `sudo apt-get install -y git-lfs`, `git lfs install`, then inside the project run `git lfs pull`. Next time, install LFS before cloning (Step 2 in Part 2).
+  ```bash
+  cd ~/phosphobot && bash install.sh
+  ```
+
+- If you closed the terminal after install, you may need to load nvm first, then try building again:
+
+  ```bash
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+  cd ~/phosphobot
+  make build_frontend
+  ```
+
+**2. Build the dashboard again from the project root**
+
+Always run the build from the **repo root** (the folder that contains both `dashboard` and `phosphobot`):
+
+```bash
+cd ~/phosphobot
+make build_frontend
+```
+
+Wait until it finishes. If it stops with red error text, go to step 3.
+
+**3. Clean and rebuild the dashboard**
+
+Sometimes old or broken files cause the build to fail. Clean them and try again:
+
+```bash
+cd ~/phosphobot/dashboard
+rm -rf node_modules dist
+npm install
+npm run build
+```
+
+If that works, copy the built files into the place the server expects:
+
+```bash
+mkdir -p ~/phosphobot/phosphobot/resources/dist
+cp -r ~/phosphobot/dashboard/dist/* ~/phosphobot/phosphobot/resources/dist/
+```
+
+Then start the server again (see Step 7 in Part 3).
+
+**4. Check the error message**
+
+- **“npm ERR!” or “node-gyp”** — Often means a dependency failed to compile. Try step 3; if it still fails, make sure you ran `bash install.sh` (it installs build tools). You can also try: `cd ~/phosphobot/dashboard` then `npm install --legacy-peer-deps` then `npm run build`.
+- **“EACCES” or “permission denied”** — Do not use `sudo` with `npm install`. Fix folder ownership if needed: `sudo chown -R $USER:$USER ~/phosphobot`.
+- **“The 'dist' directory does not exist”** when starting the server — The UI was never built or the copy failed. Run `cd ~/phosphobot` then `make build_frontend` again, then start the server.
+
+**5. You can still run the server without the UI**
+
+If you only need the API (e.g. another app talks to the robot), the server can run without the dashboard. The web page at http://localhost:8020 may be blank or show an error, but the backend is still running. To get the full UI working, you must fix the dashboard build (steps 1–4 above).
 
 ---
 
 ## If something goes wrong
 
-- **“dist directory does not exist”** — Run `cd ~/phosphobot` then `make build_frontend`, then start the server again.
-- **Robot / serial port not found** — Run `sudo usermod -aG dialout $USER`, log out and back in, then `sudo chmod 666 /dev/ttyACM*`.
-- **Permission denied on /dev/ttyACM0** — Run `sudo chmod 666 /dev/ttyACM*` (you may need to after each reboot).
-- **Script says “only one arm”** — Unplug all arms, plug in only the one you want to change, and run the command again.
-- **USD files missing or very small** — See “USD files missing” in the UI section above (install Git LFS and run `git lfs pull`).
-- **docs or bullet3 folder is empty** — Run `cd ~/phosphobot` then `git submodule update --init --recursive`. Or clone with `git clone --recurse-submodules https://github.com/Disniekie01/phosphobot.git`.
+- **“dist directory does not exist”**  
+  Run: `cd ~/phosphobot` then `make build_frontend`, then try starting the server again.
+
+- **Robot / serial port not found**  
+  Make sure you’re in the `dialout` group: run `sudo usermod -aG dialout $USER`, then log out and log back in. Then try `sudo chmod 666 /dev/ttyACM*` again.
+
+- **Permission denied on /dev/ttyACM0**  
+  Run: `sudo chmod 666 /dev/ttyACM*` (you may need to do this after each reboot).
+
+- **Script says “only one arm”**  
+  Unplug all arms, plug in only the one you want to change, and run the command again.
+
+- **USD files missing or very small after clone**  
+  The repo uses Git LFS for USD (Isaac Sim) files. Install LFS and pull: `sudo apt-get install -y git-lfs`, then `git lfs install`, then inside the project run `git lfs pull`. Next time, install LFS *before* cloning (see Step 2 in Part 2).
+
+- **docs or bullet3 folder is empty**  
+  The repo uses submodules for those folders. Run `cd ~/phosphobot` then `git submodule update --init --recursive` to download them. Or next time clone with: `git clone --recurse-submodules https://github.com/Disniekie01/phosphobot.git`.
 
 If you’re still stuck, check **HOW_TO_RUN.md** and **phosphobot/docs/SERVO_EEPROM_LIMITS.md** in the project for more detail.
