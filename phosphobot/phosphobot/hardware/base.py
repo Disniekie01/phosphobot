@@ -1200,7 +1200,8 @@ class BaseManipulator(BaseRobot):
             for i, servo_id in enumerate(self.SERVO_IDS):  # Controlling 3 joints
                 joint_voltage = self.read_motor_voltage(servo_id)
                 if joint_voltage is not None:
-                    current_voltage[i] = joint_voltage
+                    # Coerce to scalar (read_motor_voltage may return array on some backends)
+                    current_voltage[i] = np.asarray(joint_voltage).flat[0]
             return current_voltage
 
         # If the robot is not connected, error raised

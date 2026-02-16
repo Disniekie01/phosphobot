@@ -357,7 +357,9 @@ class SO100Hardware(BaseManipulator):
                 motor_names=self.servo_id_to_motor_name[servo_id],
             )
             self.motor_communication_errors = 0
-            return voltage / 10.0  # unit is 0.1V
+            # motors_bus.read returns a numpy array; ensure scalar for base.current_voltage()
+            v = np.asarray(voltage).flat[0] / 10.0  # unit is 0.1V
+            return float(v)
         except Exception as e:
             logger.warning(f"Error reading motor voltage for servo {servo_id}: {e}")
             self.update_motor_errors()

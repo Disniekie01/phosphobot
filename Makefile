@@ -1,5 +1,9 @@
 # Makefile for IRL Robotics - running simulation and launching server
 
+# Where this Makefile lives (repo root). Use this so targets work from any cwd.
+REPO_ROOT := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+# App expects the dashboard at phosphobot/resources/dist (same as get_resources_path() / "dist")
+FRONTEND_DEST := $(REPO_ROOT)phosphobot/resources/dist
 
 # Default output filename when running `make build`
 OUTPUT_FILENAME ?= main.bin
@@ -83,9 +87,11 @@ clean_build:
 	cd ./phosphobot && rm -rf main.build main.dist main.onefile-build $(OUTPUT_FILENAME)
 
 build_frontend:
-	cd ./dashboard && npm i && npm run build && \
-	mkdir -p ../phosphobot/resources/dist/ && \
-	cp -r ./dist/* ../phosphobot/resources/dist/
+	@echo "Building dashboard and copying to $(FRONTEND_DEST)"
+	cd "$(REPO_ROOT)dashboard" && npm i && npm run build && \
+	mkdir -p "$(FRONTEND_DEST)" && \
+	cp -r ./dist/* "$(FRONTEND_DEST)/" && \
+	echo "Done. Dashboard is at $(FRONTEND_DEST)"
 
 # Clean up
 stop:

@@ -111,15 +111,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(lifespan=lifespan)
 
 # Check if "/dist" is not empty and exists
+_dist_path = get_resources_path() / "dist"
 if (
-    not (get_resources_path() / "dist").exists()
-    or not (get_resources_path() / "dist").is_dir()
-    or not any((get_resources_path() / "dist").iterdir())
+    not _dist_path.exists()
+    or not _dist_path.is_dir()
+    or not any(_dist_path.iterdir())
 ):
+    _resources_path = get_resources_path()
     error_message = (
-        "The 'dist' directory does not exist in the resources path. "
-        "You need to build the dashboard first, then copy dashboard/dist to posphobot/resources/dist. "
-        "Make sure node and npm are installed, then run the command: make build_frontend"
+        f"The 'dist' directory does not exist at {_resources_path / 'dist'}. "
+        "From the repo root run: make build_frontend "
+        "(requires node and npm; copies dashboard/dist to phosphobot/resources/dist)."
     )
     raise FileNotFoundError(error_message)
 

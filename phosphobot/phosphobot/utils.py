@@ -589,10 +589,12 @@ def create_video_file(
 
 def get_home_app_path() -> Path:
     """
-    Return the path to the app's folder in the user's home directory.
-    This is used to store user-specific data.
+    Return the path to the app's folder for user-specific data (recordings,
+    config, tokens, etc.). Uses the current machine's user and can be
+    overridden per machine via PHOSPHOBOT_HOME.
 
-    It's platform dependent.
+    Default: Path.home() / "phosphobot"
+    Override: set env PHOSPHOBOT_HOME to e.g. /home/ubuntu/phosphobot
 
     user_home/
         phosphobot/
@@ -600,7 +602,9 @@ def get_home_app_path() -> Path:
             recordings/
             ...
     """
-    home_path = Path.home() / "phosphobot"
+    home_path = Path(
+        os.environ.get("PHOSPHOBOT_HOME", str(Path.home() / "phosphobot"))
+    )
     # Create the folder if it doesn't exist
     home_path.mkdir(parents=True, exist_ok=True)
     # Create subfolders
