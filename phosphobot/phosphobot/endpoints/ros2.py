@@ -22,11 +22,30 @@ ROS2_WORKSPACE = os.environ.get(
     os.path.expanduser("~/phosphobot/so-arm101-ros2-bridge"),
 )
 
-# Shell preamble to source ROS2 + workspace
+
+def _ros_setup_path() -> str:
+    """ROS distro path: prefer ROS_DISTRO env, else auto-detect (jazzy, humble)."""
+    distro = os.environ.get("ROS_DISTRO", "").strip().lower()
+    if distro:
+        path = f"/opt/ros/{distro}/setup.bash"
+        if os.path.isfile(path):
+            return path
+    for d in ("jazzy", "humble", "iron", "rolling"):
+        path = f"/opt/ros/{d}/setup.bash"
+        if os.path.isfile(path):
+            return path
+    return "/opt/ros/humble/setup.bash"
+
+
+_ROS_SETUP = _ros_setup_path()
+
+# Shell preamble to source ROS2 + workspace (for teleop node)
 _SOURCE_CMD = (
-    "source /opt/ros/humble/setup.bash && "
+    f"source {_ROS_SETUP} && "
     f"source {ROS2_WORKSPACE}/install/setup.bash && "
 )
+# Relays only need base ROS2 + topic_tools (no workspace)
+_SOURCE_CMD_RELAYS = f"source {_ROS_SETUP} && "
 
 
 class ROS2ProcessStatus(BaseModel):
@@ -44,8 +63,10 @@ class ROS2ActionResponse(BaseModel):
     message: str
 
 
-async def _start_process(name: str, cmd: str) -> bool:
-    """Start a ROS2 process in the background."""
+async def _start_process(
+    name: str, cmd: str, *, source_cmd: Optional[str] = None
+) -> bool:
+    """Start a ROS2 process in the background. Use source_cmd for relays (ROS2 only)."""
     global _ros2_processes
 
     # If already running, skip
@@ -55,7 +76,8 @@ async def _start_process(name: str, cmd: str) -> bool:
             logger.info(f"ROS2 process '{name}' is already running (pid={proc.pid})")
             return True
 
-    full_cmd = _SOURCE_CMD + cmd
+    preamble = source_cmd if source_cmd is not None else _SOURCE_CMD
+    full_cmd = preamble + cmd
     logger.info(f"Starting ROS2 process '{name}': {cmd}")
 
     try:
@@ -193,7 +215,7 @@ async def start_relays() -> ROS2ActionResponse:
     ]
     results = []
     for name, cmd in relays:
-        ok = await _start_process(name, cmd)
+        ok = await _start_process(name, cmd, source_cmd=_SOURCE_CMD_RELAYS)
         results.append(ok)
 
     if all(results):

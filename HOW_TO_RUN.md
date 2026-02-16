@@ -2,6 +2,8 @@
 
 This guide explains how to build the dashboard and run the server from the phosphobot repo.
 
+**New to the terminal?** Use the step-by-step guide with copy-paste commands: [docs/INSTALL_FOR_BEGINNERS.md](docs/INSTALL_FOR_BEGINNERS.md) (clone, install, run, and change servo limits).
+
 ## Prerequisites
 
 - **Python 3.9+** (3.10 recommended)
@@ -97,15 +99,41 @@ cd phosphobot && uv run irlrobotics run --port 8020
 
 Then run the server as usual.
 
-## 5. Troubleshooting
+## 5. Isaac Sim relays (SSH / headless)
+
+When running Phospho on an SSH machine and using **Start relays** (or **Start all**) from the dashboard ROS2 page, the relays need only base ROS2 and the `topic_tools` package. You do **not** need to build the `so-arm101-ros2-bridge` workspace for relays to work.
+
+On the SSH machine you need ROS2 and the topic_tools package. The backend **auto-detects** the installed distro (Jazzy, Humble, etc.) and uses it for relays and teleop.
+
+```bash
+# If you have ROS2 Jazzy (e.g. Ubuntu 24.04):
+sudo apt install -y ros-jazzy-topic-tools
+
+# If you have ROS2 Humble (e.g. Ubuntu 22.04):
+sudo apt install -y ros-humble-topic-tools
+```
+
+To force a specific distro (optional): `export ROS_DISTRO=jazzy` (or `humble`) before starting the server.
+
+Then start the server as usual. From the dashboard, use **Start relays** or **Start all**; relay processes use the detected ROS2 install (no workspace required). If Isaac Sim runs on another machine, ensure both use the same ROS2 domain, e.g. `export ROS_DOMAIN_ID=0` on both.
+
+Optional: to run the **teleop** node from the dashboard (not just relays), set the bridge path and build the workspace:
+
+```bash
+export ROS2_BRIDGE_PATH=/path/to/phosphobot/so-arm101-ros2-bridge
+cd $ROS2_BRIDGE_PATH && colcon build && source install/setup.bash
+```
+
+## 6. Troubleshooting
 
 | Issue | What to do |
 |-------|------------|
 | `FileNotFoundError: The 'dist' directory does not exist` | From repo root run `make build_frontend`. Ensure Node/npm are installed. |
 | `Failed to spawn: irlrobotics` | Run from inside the `phosphobot` package dir: `cd phosphobot && uv run irlrobotics run ...` (from repo root: `phosphobot` is the inner package that has `pyproject.toml`). |
 | Serial/robot not found | Check USB/serial connections and that your user is in the `dialout` group: `sudo usermod -aG dialout $USER` (then log out and back in). |
+| Isaac Sim relays not starting | On the machine running Phospho, install ROS2 (Jazzy or Humble) and the matching `topic-tools` package (`ros-jazzy-topic-tools` or `ros-humble-topic-tools`). Relays do not require the bridge workspace. If Isaac is on another host, set the same `ROS_DOMAIN_ID` on both. |
 
-## 6. One-liner from repo root
+## 7. One-liner from repo root
 
 Build frontend and run on port 8020 with no telemetry:
 
