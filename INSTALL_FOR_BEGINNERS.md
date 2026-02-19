@@ -148,6 +148,57 @@ To stop the server later: press **Ctrl+C** in that terminal.
 
 ---
 
+## Part 3b: If you use ROS2 Jazzy (topic tools and teleop node)
+
+If you have **ROS2 Jazzy** installed and use the **ROS2 Bridge** page (e.g. for Isaac Sim or the teleop node), do these steps once.
+
+**Step 7b — Install topic tools (for relays)**
+
+The dashboard’s “Start relays” needs the `topic_tools` package. In the terminal, run:
+
+```bash
+sudo apt update
+sudo apt install -y ros-jazzy-topic-tools
+```
+
+Without this, relays will fail when you click “Start relays” or “Start all” on the ROS2 Bridge page.
+
+---
+
+**Step 7c — Build the ROS2 bridge (so the teleop node works)**
+
+If **“Start teleop”** on the ROS2 Bridge page does nothing or says the teleop node failed, the bridge workspace may not be built yet. Build it once:
+
+```bash
+cd ~/phosphobot/so-arm101-ros2-bridge
+source /opt/ros/jazzy/setup.bash
+colcon build
+```
+
+Wait until it finishes. Then restart the IRL Robotics server (Step 7) and try “Start teleop” again on the ROS2 Bridge page.
+
+---
+
+**Step 7d — Try the app with a simulated robot (no hardware)**
+
+If you want to test the dashboard **without a real robot** and still see “Robot connected” and use Control:
+
+```bash
+cd ~/phosphobot
+make sim
+```
+
+Or from the inner folder:
+
+```bash
+cd ~/phosphobot/phosphobot
+uv run irlrobotics run --simulation=headless --only-simulation --simulate-cameras --port 8020 --no-telemetry
+```
+
+Then open **http://localhost:8020**. The simulated SO-100 will show as connected and you can use Control (keyboard, gamepad, sliders).
+
+---
+
 ## Part 4: Change the servo (angle) limits
 
 The robot arms use servos that have **angle limits** stored in memory. Sometimes these limits are too narrow and a joint can “lock” or not move fully. You can set them to the full range (0–4095) so the software can control the limits.
@@ -240,6 +291,9 @@ Use your actual port instead of `/dev/ttyACM0` if needed.
 | **Read limits (no change)** | `cd ~/phosphobot/phosphobot` then `uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0` |
 | **Set full limits (one arm)** | Stop server, plug one arm, then `cd ~/phosphobot/phosphobot` then `uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0 --write` |
 | **Set full limits (gripper only)** | `cd ~/phosphobot/phosphobot` then `uv run python scripts/set_eeprom_limits.py --port /dev/ttyACM0 --write --servo 5` |
+| **ROS2 Jazzy: install topic tools** | `sudo apt install -y ros-jazzy-topic-tools` |
+| **ROS2 Jazzy: build bridge (teleop node)** | `cd ~/phosphobot/so-arm101-ros2-bridge` then `source /opt/ros/jazzy/setup.bash` then `colcon build` |
+| **Run with simulated robot** | `cd ~/phosphobot` then `make sim` then open **http://localhost:8020** in browser |
 
 ---
 
@@ -335,5 +389,14 @@ If you only need the API (e.g. another app talks to the robot), the server can r
 
 - **docs or bullet3 folder is empty**  
   The repo uses submodules for those folders. Run `cd ~/phosphobot` then `git submodule update --init --recursive` to download them. Or next time clone with: `git clone --recurse-submodules https://github.com/Disniekie01/phosphobot.git`.
+
+- **ROS2 Jazzy: "Start relays" or relays fail**  
+  Install topic tools: `sudo apt install -y ros-jazzy-topic-tools`. Then try "Start relays" or "Start all" again on the ROS2 Bridge page.
+
+- **ROS2 Jazzy: "Start teleop" does nothing or teleop node fails**  
+  Build the bridge workspace once: `cd ~/phosphobot/so-arm101-ros2-bridge`, then `source /opt/ros/jazzy/setup.bash`, then `colcon build`. Restart the IRL Robotics server and try "Start teleop" again.
+
+- **Dashboard says "Robot disconnected" but I'm only testing (no hardware)**  
+  Run with the simulated robot so it shows as connected: `cd ~/phosphobot` then `make sim`, then open http://localhost:8020. See Part 3b, Step 7d.
 
 If you’re still stuck, check **HOW_TO_RUN.md** and **phosphobot/docs/SERVO_EEPROM_LIMITS.md** in the project for more detail.

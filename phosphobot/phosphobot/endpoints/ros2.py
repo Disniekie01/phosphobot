@@ -216,12 +216,26 @@ async def ros2_status() -> ROS2StatusResponse:
     return ROS2StatusResponse(processes=statuses)
 
 
+def _teleop_workspace_ready() -> tuple[bool, str]:
+    """Return (ready, error_message). If not ready, error_message explains what to do."""
+    setup = os.path.join(ROS2_WORKSPACE, "install", "setup.bash")
+    if not os.path.isfile(setup):
+        return (
+            False,
+            f"ROS2 bridge workspace not built. Run: cd '{ROS2_WORKSPACE}' && source /opt/ros/jazzy/setup.bash && colcon build",
+        )
+    return (True, "")
+
+
 @router.post("/start/teleop", response_model=ROS2ActionResponse)
 async def start_teleop(
     phospho_url: str = "http://localhost:8020",
     isaac_wrist_roll_offset_rad: float = -2.3562,
 ) -> ROS2ActionResponse:
     """Start the ROS2 HTTP teleop node (same as Humble)."""
+    ready, err_msg = _teleop_workspace_ready()
+    if not ready:
+        return ROS2ActionResponse(status="error", message=err_msg)
     cmd = (
         f'ros2 run phospho_teleop phospho_http_teleop '
         f'--ros-args -p phospho_url:="{phospho_url}" -p isaac_wrist_roll_offset_rad:={isaac_wrist_roll_offset_rad}'

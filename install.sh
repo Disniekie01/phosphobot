@@ -11,35 +11,41 @@ echo "  IRL Robotics - Installation Script"
 echo "============================================"
 echo ""
 
-# Determine install directory
-INSTALL_DIR="${IRL_INSTALL_DIR:-$HOME/phosphobot}"
+# Ensure uv and npm are on PATH (for current run and after install)
+export PATH="$HOME/.local/bin:$PATH"
 
-# If we're already inside the repo, use that
+# Determine install directory (repo root = directory containing dashboard/ and phosphobot/)
+INSTALL_DIR="${IRL_INSTALL_DIR:-$HOME/phosphobot}"
 if [ -f "$(pwd)/phosphobot/pyproject.toml" ]; then
     INSTALL_DIR="$(pwd)"
+    echo "Using existing repo at: $INSTALL_DIR"
+elif [ -f "$(pwd)/phosphobot/phosphobot/pyproject.toml" ]; then
+    INSTALL_DIR="$(pwd)/phosphobot"
     echo "Using existing repo at: $INSTALL_DIR"
 else
     echo "Install directory: $INSTALL_DIR"
 fi
 
 # ============================================
-# 1. System dependencies
+# 1. System dependencies (optional - skip if sudo not available)
 # ============================================
 echo ""
 echo "[1/6] Installing system dependencies..."
-sudo apt-get update -qq
-sudo apt-get install -y -qq \
-    git curl wget build-essential \
-    python3-dev python3-pip \
-    libgl1-mesa-glx libglib2.0-0 \
-    libudev-dev \
-    v4l-utils \
-    2>/dev/null
-
-# Add user to dialout group for serial port access (SO-100 robots)
-if ! groups "$USER" | grep -q dialout; then
-    sudo usermod -aG dialout "$USER"
-    echo "  Added $USER to dialout group (re-login required for serial access)"
+if sudo -n true 2>/dev/null; then
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq \
+        git curl wget build-essential \
+        python3-dev python3-pip \
+        libgl1-mesa-glx libglib2.0-0 \
+        libudev-dev \
+        v4l-utils \
+        2>/dev/null || true
+    if ! groups "$USER" | grep -q dialout; then
+        sudo usermod -aG dialout "$USER" 2>/dev/null && echo "  Added $USER to dialout group (re-login for serial access)" || true
+    fi
+    echo "  System dependencies installed"
+else
+    echo "  Skipping system deps (run with sudo or: sudo apt-get install -y git curl build-essential python3-dev libgl1-mesa-glx libudev-dev v4l-utils)"
 fi
 
 # ============================================
@@ -50,10 +56,13 @@ echo "[2/6] Installing uv..."
 if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    (grep -q '\.local/bin' ~/.bashrc 2>/dev/null) || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
     echo "  uv installed"
+fi
+if command -v uv &> /dev/null; then
+    echo "  uv ready: $(uv --version)"
 else
-    echo "  uv already installed ($(uv --version))"
+    echo "  ERROR: uv not found. Install manually: curl -LsSf https://astral.sh/uv/install.sh | sh" && exit 1
 fi
 
 # ============================================
@@ -61,13 +70,14 @@ fi
 # ============================================
 echo ""
 echo "[3/6] Installing Node.js..."
+# Load nvm if present so node/npm are available later
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 if ! command -v node &> /dev/null; then
-    # Install via nvm
-    if [ ! -d "$HOME/.nvm" ]; then
+    if [ ! -d "$NVM_DIR" ]; then
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
     fi
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
     nvm install 20
     nvm use 20
     echo "  Node.js $(node --version) installed"
@@ -93,23 +103,32 @@ cd "$INSTALL_DIR"
 # ============================================
 echo ""
 echo "[5/6] Installing Python dependencies..."
+# Use cache inside repo to avoid permission issues with ~/.local/share/uv
+export UV_CACHE_DIR="${UV_CACHE_DIR:-$INSTALL_DIR/.uv-cache}"
+export UV_DATA_DIR="${UV_DATA_DIR:-$INSTALL_DIR/.uv-data}"
+mkdir -p "$UV_CACHE_DIR" "$UV_DATA_DIR"
 cd "$INSTALL_DIR/phosphobot"
 uv sync --python 3.10
 echo "  Python dependencies installed"
 
 echo ""
 echo "Building dashboard..."
-cd "$INSTALL_DIR/dashboard"
-
-# Ensure nvm is loaded
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-npm install --silent 2>/dev/null
-npm run build
-mkdir -p "$INSTALL_DIR/phosphobot/resources/dist/"
-cp -r ./dist/* "$INSTALL_DIR/phosphobot/resources/dist/"
-echo "  Dashboard built"
+if ! command -v npm &> /dev/null; then
+    echo "  WARNING: npm not found. Install Node.js (e.g. nvm install 20) and re-run, or skip dashboard with SKIP_DASHBOARD=1"
+    if [ "${SKIP_DASHBOARD:-0}" = "1" ]; then
+        echo "  Skipping dashboard (SKIP_DASHBOARD=1)"
+    else
+        exit 1
+    fi
+else
+    cd "$INSTALL_DIR/dashboard"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    npm install --silent
+    npm run build
+    mkdir -p "$INSTALL_DIR/phosphobot/resources/dist/"
+    cp -r ./dist/* "$INSTALL_DIR/phosphobot/resources/dist/"
+    echo "  Dashboard built"
+fi
 
 # ============================================
 # 6. Install ROS2 bridge (optional - only if ROS2 is available)

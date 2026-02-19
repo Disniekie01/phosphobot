@@ -50,6 +50,10 @@ prod_info:
 local:
 	cd ./phosphobot && uv run irlrobotics run --simulation=gui --port=8080 --host=127.0.0.1 --no-telemetry
 
+# Run with simulated robot (shows as "Connected" in dashboard; no real hardware)
+sim:
+	cd phosphobot && uv run --python 3.10 irlrobotics run --simulation=headless --only-simulation --simulate-cameras --no-crash-telemetry
+
 # For running integration tests
 test_server:
 	cd ./phosphobot && uv run irlrobotics run --simulation=headless --only-simulation --simulate-cameras --port=8080 --host=127.0.0.1 --no-telemetry &
