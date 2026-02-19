@@ -103,7 +103,9 @@ Then run the server as usual.
 
 When running Phospho on an SSH machine and using **Start relays** (or **Start all**) from the dashboard ROS2 page, the relays need only base ROS2 and the `topic_tools` package. You do **not** need to build the `so-arm101-ros2-bridge` workspace for relays to work.
 
-On the SSH machine you need ROS2 and the topic_tools package. The backend **auto-detects** the installed distro (Jazzy, Humble, etc.) and uses it for relays and teleop.
+On the SSH machine you need ROS2 and the **topic_tools** package. The backend **auto-detects** the installed distro (Jazzy, Humble, etc.) and uses it for relays and teleop.
+
+**Important:** Install topic_tools **before** starting the server, otherwise relays will fail:
 
 ```bash
 # If you have ROS2 Jazzy (e.g. Ubuntu 24.04):
@@ -117,12 +119,23 @@ To force a specific distro (optional): `export ROS_DISTRO=jazzy` (or `humble`) b
 
 Then start the server as usual. From the dashboard, use **Start relays** or **Start all**; relay processes use the detected ROS2 install (no workspace required). If Isaac Sim runs on another machine, ensure both use the same ROS2 domain, e.g. `export ROS_DOMAIN_ID=0` on both.
 
-Optional: to run the **teleop** node from the dashboard (not just relays), set the bridge path and build the workspace:
+To run the **teleop** node from the dashboard (same on Jazzy or Humble), build the bridge once. From the **phosphobot repo** (the folder that contains `so-arm101-ros2-bridge` and `phosphobot/`), e.g. `~/IRL ROBOTICS/phosphobot`:
 
 ```bash
-export ROS2_BRIDGE_PATH=/path/to/phosphobot/so-arm101-ros2-bridge
-cd $ROS2_BRIDGE_PATH && colcon build && source install/setup.bash
+# Jazzy (e.g. Ubuntu 24.04)
+source /opt/ros/jazzy/setup.bash
+cd ~/IRL\ ROBOTICS/phosphobot/so-arm101-ros2-bridge && colcon build
+
+# Or from inside the phosphobot repo:
+cd ~/IRL\ ROBOTICS/phosphobot
+source /opt/ros/jazzy/setup.bash && cd so-arm101-ros2-bridge && colcon build
+
+# Humble (e.g. Ubuntu 22.04): use /opt/ros/humble/setup.bash instead
 ```
+
+**Required:** Install topic_tools **before** starting the server: `sudo apt install -y ros-jazzy-topic-tools` (or `ros-humble-topic-tools`). Without it, relays will fail immediately.
+
+The server auto-detects the workspace next to the phosphobot package; to use a different path set `export ROS2_BRIDGE_PATH=/path/to/so-arm101-ros2-bridge` before starting.
 
 ## 6. Troubleshooting
 

@@ -17,10 +17,23 @@ router = APIRouter(prefix="/ros2", tags=["ros2"])
 # Track running ROS2 processes
 _ros2_processes: Dict[str, asyncio.subprocess.Process] = {}
 
-ROS2_WORKSPACE = os.environ.get(
-    "ROS2_BRIDGE_PATH",
-    os.path.expanduser("~/phosphobot/so-arm101-ros2-bridge"),
-)
+def _default_ros2_workspace() -> str:
+    """Default to so-arm101-ros2-bridge in the same repo as this package (works with Jazzy or Humble)."""
+    try:
+        this_file = os.path.abspath(__file__)
+        endpoints_dir = os.path.dirname(this_file)
+        pkg_inner = os.path.dirname(endpoints_dir)
+        pkg_outer = os.path.dirname(pkg_inner)
+        repo_root = os.path.dirname(pkg_outer)
+        bridge = os.path.join(repo_root, "so-arm101-ros2-bridge")
+        if os.path.isdir(bridge):
+            return bridge
+    except Exception:
+        pass
+    return os.path.expanduser("~/phosphobot/so-arm101-ros2-bridge")
+
+
+ROS2_WORKSPACE = os.environ.get("ROS2_BRIDGE_PATH", _default_ros2_workspace())
 
 
 def _ros_setup_path() -> str:
@@ -39,13 +52,33 @@ def _ros_setup_path() -> str:
 
 _ROS_SETUP = _ros_setup_path()
 
+# Quote paths so spaces (e.g. "IRL ROBOTICS") do not break shell commands (Jazzy/Humble same behaviour)
+_ROS_SETUP_QUOTED = f'"{_ROS_SETUP}"'
+_ROS2_WORKSPACE_INSTALL_QUOTED = f'"{ROS2_WORKSPACE}/install/setup.bash"'
+
 # Shell preamble to source ROS2 + workspace (for teleop node)
 _SOURCE_CMD = (
-    f"source {_ROS_SETUP} && "
-    f"source {ROS2_WORKSPACE}/install/setup.bash && "
+    f"source {_ROS_SETUP_QUOTED} && "
+    f"source {_ROS2_WORKSPACE_INSTALL_QUOTED} && "
 )
 # Relays only need base ROS2 + topic_tools (no workspace)
-_SOURCE_CMD_RELAYS = f"source {_ROS_SETUP} && "
+_SOURCE_CMD_RELAYS = f"source {_ROS_SETUP_QUOTED} && "
+
+# Wait up to this many seconds for the source topic to exist before starting relay
+_RELAY_WAIT_TOPIC_SEC = 60
+
+
+def _relay_cmd_with_wait(source_topic: str, target_topic: str) -> str:
+    """Build a relay command that waits for source topic to exist, then runs topic_tools relay.
+    Prevents relay from exiting immediately when teleop hasn't advertised yet (same behavior on Jazzy/Humble).
+    """
+    # Bash: wait until ros2 topic list shows the topic, then exec the relay (so relay stays in foreground)
+    wait_and_relay = (
+        f"for i in $(seq 1 {_RELAY_WAIT_TOPIC_SEC}); do "
+        f"ros2 topic list 2>/dev/null | grep -Fxq '{source_topic}' && break; sleep 1; done; "
+        f"exec ros2 run topic_tools relay '{source_topic}' '{target_topic}'"
+    )
+    return wait_and_relay
 
 
 class ROS2ProcessStatus(BaseModel):
@@ -90,10 +123,37 @@ async def _start_process(
         )
         _ros2_processes[name] = proc
         logger.success(f"ROS2 process '{name}' started (pid={proc.pid})")
+        # Check shortly if process died (e.g. wrong distro / missing topic_tools / workspace not built)
+        asyncio.create_task(_check_process_early_exit(name, proc, cmd))
         return True
     except Exception as e:
         logger.error(f"Failed to start ROS2 process '{name}': {e}")
         return False
+
+
+async def _check_process_early_exit(name: str, proc: asyncio.subprocess.Process, cmd: str) -> None:
+    """After 2s, if process exited, log stderr to help debug (e.g. workspace not built, wrong distro, relay failed)."""
+    await asyncio.sleep(2.0)
+    if proc.returncode is not None and name in _ros2_processes and _ros2_processes[name] is proc:
+        err = b""
+        stdout = b""
+        if proc.stderr:
+            try:
+                err = await asyncio.wait_for(proc.stderr.read(), timeout=0.5)
+            except (asyncio.TimeoutError, Exception):
+                pass
+        if proc.stdout:
+            try:
+                stdout = await asyncio.wait_for(proc.stdout.read(), timeout=0.5)
+            except (asyncio.TimeoutError, Exception):
+                pass
+        err_msg = err.decode().strip() if err else "process exited"
+        stdout_msg = stdout.decode().strip() if stdout else ""
+        logger.warning(
+            f"ROS2 process '{name}' exited with code {proc.returncode}. "
+            f"Command: {cmd}. Stderr: {err_msg}. Stdout: {stdout_msg}. "
+            "If teleop: ensure workspace is built (colcon build). If relay: ensure topic_tools installed (ros-jazzy-topic-tools) and topic exists."
+        )
 
 
 async def _stop_process(name: str) -> bool:
@@ -139,6 +199,7 @@ async def ros2_status() -> ROS2StatusResponse:
     process_names = [
         "http_teleop",
         "relay_joints",
+        "relay_joints_cmd",
         "relay_pose",
         "relay_vel",
         "relay_gripper",
@@ -160,7 +221,7 @@ async def start_teleop(
     phospho_url: str = "http://localhost:8020",
     isaac_wrist_roll_offset_rad: float = -2.3562,
 ) -> ROS2ActionResponse:
-    """Start the ROS2 HTTP teleop node. Pass isaac_wrist_roll_offset_rad so sim gripper roll matches real (no rebuild needed)."""
+    """Start the ROS2 HTTP teleop node (same as Humble)."""
     cmd = (
         f'ros2 run phospho_teleop phospho_http_teleop '
         f'--ros-args -p phospho_url:="{phospho_url}" -p isaac_wrist_roll_offset_rad:={isaac_wrist_roll_offset_rad}'
@@ -206,12 +267,13 @@ async def set_teleop_wrist_roll_offset(value: float) -> ROS2ActionResponse:
 
 @router.post("/start/relays", response_model=ROS2ActionResponse)
 async def start_relays() -> ROS2ActionResponse:
-    """Start all Isaac Sim topic relays."""
+    """Start all Isaac Sim topic relays (same behaviour on Jazzy or Humble). Each relay waits for its source topic before starting."""
     relays = [
-        ("relay_joints", "ros2 run topic_tools relay /joint_states /isaac_joint_command"),
-        ("relay_pose", "ros2 run topic_tools relay /robot/cmd_pose /isaac_pose_command"),
-        ("relay_vel", "ros2 run topic_tools relay /robot/cmd_vel /isaac_vel_command"),
-        ("relay_gripper", "ros2 run topic_tools relay /robot/gripper /isaac_gripper_command"),
+        ("relay_joints", _relay_cmd_with_wait("/joint_states", "/isaac_joint_command")),
+        ("relay_joints_cmd", _relay_cmd_with_wait("/joint_states", "/joint_command")),
+        ("relay_pose", _relay_cmd_with_wait("/robot/cmd_pose", "/isaac_pose_command")),
+        ("relay_vel", _relay_cmd_with_wait("/robot/cmd_vel", "/isaac_vel_command")),
+        ("relay_gripper", _relay_cmd_with_wait("/robot/gripper", "/isaac_gripper_command")),
     ]
     results = []
     for name, cmd in relays:
@@ -228,9 +290,12 @@ async def start_relays() -> ROS2ActionResponse:
 @router.post("/stop/relays", response_model=ROS2ActionResponse)
 async def stop_relays() -> ROS2ActionResponse:
     """Stop all Isaac Sim topic relays."""
-    for name in ["relay_joints", "relay_pose", "relay_vel", "relay_gripper"]:
+    for name in ["relay_joints", "relay_joints_cmd", "relay_pose", "relay_vel", "relay_gripper"]:
         await _stop_process(name)
     return ROS2ActionResponse(status="ok", message="All topic relays stopped")
+
+
+_RELAYS_START_DELAY_SEC = 5.0  # Let teleop advertise topics before relays (Jazzy/Humble)
 
 
 @router.post("/start/all", response_model=ROS2ActionResponse)
@@ -238,8 +303,9 @@ async def start_all(
     phospho_url: str = "http://localhost:8020",
     isaac_wrist_roll_offset_rad: float = -2.3562,
 ) -> ROS2ActionResponse:
-    """Start both the teleop node and all relays."""
+    """Start both the teleop node and all relays (same as Humble: teleop first, then relays after short delay)."""
     await start_teleop(phospho_url=phospho_url, isaac_wrist_roll_offset_rad=isaac_wrist_roll_offset_rad)
+    await asyncio.sleep(_RELAYS_START_DELAY_SEC)
     await start_relays()
     return ROS2ActionResponse(
         status="ok", message="ROS2 bridge fully started (teleop + relays)"

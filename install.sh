@@ -116,16 +116,23 @@ echo "  Dashboard built"
 # ============================================
 echo ""
 echo "[6/6] ROS2 bridge setup..."
-if [ -f "/opt/ros/humble/setup.bash" ]; then
-    echo "  ROS2 Humble detected, building bridge..."
-    source /opt/ros/humble/setup.bash
+ROS_DISTRO_USED=""
+if [ -f "/opt/ros/jazzy/setup.bash" ]; then
+    ROS_DISTRO_USED="jazzy"
+elif [ -f "/opt/ros/humble/setup.bash" ]; then
+    ROS_DISTRO_USED="humble"
+fi
+if [ -n "$ROS_DISTRO_USED" ]; then
+    echo "  ROS2 $ROS_DISTRO_USED detected, building bridge..."
+    source "/opt/ros/$ROS_DISTRO_USED/setup.bash"
     cd "$INSTALL_DIR/so-arm101-ros2-bridge"
     colcon build 2>/dev/null
     echo "  ROS2 bridge built"
+    echo "  Install topic_tools for relays: sudo apt install -y ros-$ROS_DISTRO_USED-topic-tools"
     echo "  Source it with: source $INSTALL_DIR/so-arm101-ros2-bridge/install/setup.bash"
 else
     echo "  ROS2 not found - skipping bridge build (optional)"
-    echo "  Install ROS2 Humble if you need Isaac Sim integration"
+    echo "  Install ROS2 Jazzy or Humble and ros-<distro>-topic-tools if you need Isaac Sim integration"
 fi
 
 # ============================================

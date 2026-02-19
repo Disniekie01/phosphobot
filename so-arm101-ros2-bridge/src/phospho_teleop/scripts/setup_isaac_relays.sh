@@ -7,7 +7,7 @@ echo "🚀 Setting up Isaac Sim topic relays..."
 
 # Check if ROS2 is sourced
 if [ -z "$ROS_DISTRO" ]; then
-    echo "❌ ROS2 not sourced. Please run: source /opt/ros/humble/setup.bash"
+    echo "❌ ROS2 not sourced. Please run: source /opt/ros/jazzy/setup.bash (or source /opt/ros/humble/setup.bash)"
     exit 1
 fi
 

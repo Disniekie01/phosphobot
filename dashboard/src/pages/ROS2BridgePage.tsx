@@ -40,6 +40,10 @@ const PROCESS_LABELS: Record<string, { label: string; description: string }> = {
     label: "Joint States Relay",
     description: "/joint_states → /isaac_joint_command",
   },
+  relay_joints_cmd: {
+    label: "Joint Command Relay (Isaac default)",
+    description: "/joint_states → /joint_command",
+  },
   relay_pose: {
     label: "Pose Command Relay",
     description: "/robot/cmd_pose → /isaac_pose_command",
@@ -120,6 +124,7 @@ export function ROS2BridgePage() {
   const teleopRunning = processes.find((p) => p.name === "http_teleop")?.running;
   const relayNames = [
     "relay_joints",
+    "relay_joints_cmd",
     "relay_pose",
     "relay_vel",
     "relay_gripper",

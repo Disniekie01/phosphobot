@@ -37,14 +37,9 @@ class PhosphoHttpTeleop(Node):
         self.poll_count = 0
         self.error_count = 0
         
-        # Joint names for SO-ARM101 (matching Isaac Sim expectations)
+        # Joint names for SO-100 / SO-ARM101 (same as Humble; Isaac expects these)
         self.joint_names = [
-            'Rotation',      # Base rotation
-            'Pitch',         # Shoulder pitch  
-            'Elbow',         # Elbow
-            'Wrist_Pitch',   # Wrist pitch
-            'Wrist_Roll',    # Wrist roll
-            'Jaw'            # Gripper
+            'Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw'
         ]
         
         # URDF joint limits (min, max) in radians - clamp to these
@@ -110,7 +105,7 @@ class PhosphoHttpTeleop(Node):
                 clamped[4] = clamped[4] + self.wrist_roll_offset
                 clamped[4] = max(self.joint_limits[4][0], min(self.joint_limits[4][1], clamped[4]))
             
-            # Publish joint states
+            # Publish joint states (same as Humble: SO-100 names)
             joint_state = JointState()
             joint_state.header.stamp = self.get_clock().now().to_msg()
             joint_state.name = self.joint_names
