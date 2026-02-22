@@ -13,12 +13,14 @@ import { ROS2BridgePage } from "@/pages/ROS2BridgePage";
 import { CalibrationPage } from "@/pages/calibration/CalibrationPage";
 import { ControlPage } from "@/pages/control/ControlPage";
 import { MobileControlPage } from "@/pages/control/MobileControlPage";
+import { OBSTelemetryOverlayPage } from "@/pages/OBSTelemetryOverlayPage";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/obs" element={<OBSTelemetryOverlayPage />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<DashboardPage />} />
           <Route path="/control" element={<ControlPage />} />

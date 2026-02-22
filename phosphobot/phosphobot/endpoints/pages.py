@@ -77,6 +77,7 @@ INDEX_PATH = get_resources_path() / "dist" / "index.html"
 @router.get("/mobile", response_class=HTMLResponse)
 @router.get("/train", response_class=HTMLResponse)
 @router.get("/inference", response_class=HTMLResponse)
+@router.get("/obs", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def serve_dashboard(request: Request) -> HTMLResponse:
     with open(INDEX_PATH.resolve(), "r") as f:
