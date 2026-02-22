@@ -5,12 +5,16 @@ Start/stop ROS2 teleop nodes and topic relays from the dashboard.
 
 import asyncio
 import os
+import shlex
 import signal
+import sys
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel
+import httpx
 
 router = APIRouter(prefix="/ros2", tags=["ros2"])
 
@@ -332,3 +336,63 @@ async def stop_all() -> ROS2ActionResponse:
     for name in list(_ros2_processes.keys()):
         await _stop_process(name)
     return ROS2ActionResponse(status="ok", message="All ROS2 processes stopped")
+
+
+def _find_isaac_sim_script() -> Optional[str]:
+    """Find Isaac Sim launcher under the current user's home. Portable across machines."""
+    home = os.path.expanduser("~")
+    path = os.path.join(home, "isaacsim", "isaac-sim.selector.sh")
+    if os.path.isfile(path):
+        return os.path.abspath(path)
+    return None
+
+
+@router.post("/start/isaac", response_model=ROS2ActionResponse)
+async def start_isaac() -> ROS2ActionResponse:
+    """Start Isaac Sim by running ~/isaacsim/isaac-sim.selector.sh (found under home for portability)."""
+    script = _find_isaac_sim_script()
+    if not script:
+        return ROS2ActionResponse(
+            status="error",
+            message="Isaac Sim not found. Look for isaac-sim.selector.sh under home (e.g. ~/isaacsim/isaac-sim.selector.sh).",
+        )
+    cmd = f"nohup {shlex.quote(script)} > /dev/null 2>&1 &"
+    try:
+        proc = await asyncio.create_subprocess_shell(
+            cmd,
+            executable="/bin/bash",
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await proc.wait()
+        logger.info(f"Isaac Sim launch started: {script}")
+        return ROS2ActionResponse(status="ok", message="Isaac Sim launch started")
+    except Exception as e:
+        logger.error(f"Failed to start Isaac Sim: {e}")
+        return ROS2ActionResponse(status="error", message=str(e))
+
+
+@router.post("/open-scenes-folder", response_model=ROS2ActionResponse)
+async def open_scenes_folder() -> ROS2ActionResponse:
+    """Open the Isaac Sim folder (under home) in the system file manager."""
+    home = os.path.expanduser("~")
+    isaac_dir = os.path.join(home, "isaacsim")
+    if not os.path.isdir(isaac_dir):
+        return ROS2ActionResponse(
+            status="error",
+            message="Isaac Sim folder not found (e.g. ~/isaacsim).",
+        )
+    opener = "xdg-open" if sys.platform.startswith("linux") else "open"
+    try:
+        proc = await asyncio.create_subprocess_shell(
+            f"{opener} {shlex.quote(isaac_dir)}",
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc.wait(), timeout=5.0)
+        return ROS2ActionResponse(status="ok", message="Opened Isaac Sim folder")
+    except Exception as e:
+        logger.error(f"Failed to open scenes folder: {e}")
+        return ROS2ActionResponse(status="error", message=str(e))

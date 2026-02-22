@@ -14,7 +14,9 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertCircle,
+  Box,
   CheckCircle,
+  FolderOpen,
   Loader2,
   Play,
   Power,
@@ -106,16 +108,24 @@ export function ROS2BridgePage() {
         ? `${endpoint}?${new URLSearchParams(body).toString()}`
         : endpoint;
       const res = await fetch(url, { method: "POST" });
-      const data = await res.json();
+      let data: { status?: string; message?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        showMessage(
+          res.ok ? "Invalid response from server" : `Request failed: ${res.status} ${res.statusText}`,
+          "error",
+        );
+        return;
+      }
       if (data.status === "ok" || data.status === "partial") {
-        showMessage(data.message, data.status === "ok" ? "success" : "info");
+        showMessage(data.message ?? "Done", data.status === "ok" ? "success" : "info");
       } else {
         showMessage(data.message || `Failed: ${actionLabel}`, "error");
       }
-      // Refresh status
       await fetchStatus();
     } catch (err) {
-      showMessage(`Error: ${err}`, "error");
+      showMessage(`Error: ${err instanceof Error ? err.message : String(err)}`, "error");
     } finally {
       setLoading((prev) => ({ ...prev, [loadingKey]: false }));
     }
@@ -234,6 +244,53 @@ export function ROS2BridgePage() {
               <PowerOff className="h-4 w-4 mr-2" />
             )}
             Stop All
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ── Start Isaac Sim ──────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Box className="h-5 w-5" />
+            Start Isaac Sim
+          </CardTitle>
+          <CardDescription>
+            Launch Isaac Sim with ROS2 bridge (no stage loaded; open scenes via View scenes or File → Open)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() =>
+              doAction("/ros2/start/isaac", "Start Isaac", "start_isaac")
+            }
+            disabled={loading["start_isaac"]}
+          >
+            {loading["start_isaac"] ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Play className="h-4 w-4 mr-2" />
+            )}
+            Start Isaac
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              doAction(
+                "/ros2/open-scenes-folder",
+                "View scenes",
+                "open_scenes",
+              )
+            }
+            disabled={loading["open_scenes"]}
+          >
+            {loading["open_scenes"] ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <FolderOpen className="h-4 w-4 mr-2" />
+            )}
+            View scenes
           </Button>
         </CardContent>
       </Card>
